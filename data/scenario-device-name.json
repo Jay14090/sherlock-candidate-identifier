@@ -1,0 +1,97 @@
+{
+  "id": "device-name",
+  "name": "Candidate joins as MacBook Pro",
+  "description": "The candidate's display name is a device name, so the system must rely on transcript role, timing, and behavior — then reward the mid-meeting rename.",
+  "expectedCandidateParticipantId": "p2",
+  "metadata": {
+    "candidateName": "Ananya Sharma",
+    "candidateEmail": "ananya.sharma@example.com",
+    "scheduledStartTime": "2026-07-08T10:00:00+05:30",
+    "interviewerNames": ["Priya Mehta", "Rohan Gupta"],
+    "interviewerEmails": ["priya@sherlock.sh"],
+    "calendarInviteText": "Technical interview for Ananya Sharma with Priya Mehta and Rohan Gupta."
+  },
+  "participants": [
+    { "id": "p1", "displayName": "Priya Mehta", "email": "priya@sherlock.sh", "isHost": true },
+    { "id": "p2", "displayName": "MacBook Pro" },
+    { "id": "p3", "displayName": "Rohan Gupta" },
+    { "id": "p4", "displayName": "Observer" }
+  ],
+  "events": [
+    { "id": "e1", "timestamp": "2026-07-08T09:57:00+05:30", "participantId": "p1", "type": "join", "payload": {} },
+    { "id": "e2", "timestamp": "2026-07-08T09:58:00+05:30", "participantId": "p3", "type": "join", "payload": {} },
+    { "id": "e3", "timestamp": "2026-07-08T10:00:30+05:30", "participantId": "p2", "type": "join", "payload": {} },
+    { "id": "e4", "timestamp": "2026-07-08T10:01:00+05:30", "participantId": "p4", "type": "join", "payload": {} },
+    { "id": "e5", "timestamp": "2026-07-08T10:01:10+05:30", "participantId": "p2", "type": "webcam_on", "payload": {} },
+    {
+      "id": "e6",
+      "timestamp": "2026-07-08T10:02:00+05:30",
+      "participantId": "p1",
+      "type": "transcript",
+      "payload": { "text": "Thanks for joining, everyone. Can you introduce yourself and walk us through your background?", "durationSeconds": 7 }
+    },
+    {
+      "id": "e7",
+      "timestamp": "2026-07-08T10:02:12+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "Hi, I am Ananya. I am currently in my final year and I built a fraud detection dashboard using React and Python.", "durationSeconds": 22 }
+    },
+    {
+      "id": "e8",
+      "timestamp": "2026-07-08T10:04:00+05:30",
+      "participantId": "p3",
+      "type": "transcript",
+      "payload": { "text": "Tell me about the backend of that dashboard.", "durationSeconds": 5 }
+    },
+    {
+      "id": "e9",
+      "timestamp": "2026-07-08T10:04:15+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "I worked on the scoring APIs, and my role was to design the fraud scoring engine end to end.", "durationSeconds": 24 }
+    },
+    { "id": "e10", "timestamp": "2026-07-08T10:06:00+05:30", "participantId": "p2", "type": "speech_activity", "payload": { "durationSeconds": 35 } },
+    {
+      "id": "e11",
+      "timestamp": "2026-07-08T10:07:00+05:30",
+      "participantId": "p1",
+      "type": "transcript",
+      "payload": { "text": "Could you walk me through how you would scale that scoring system?", "durationSeconds": 6 }
+    },
+    {
+      "id": "e12",
+      "timestamp": "2026-07-08T10:07:30+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "I would approach it with a message queue. During my internship I used Redis for hot-path caching.", "durationSeconds": 26 }
+    },
+    {
+      "id": "e13",
+      "timestamp": "2026-07-08T10:09:00+05:30",
+      "participantId": "p2",
+      "type": "display_name_change",
+      "payload": { "newDisplayName": "Ananya S" }
+    },
+    { "id": "e14", "timestamp": "2026-07-08T10:10:00+05:30", "participantId": "p2", "type": "screen_share_start", "payload": {} },
+    {
+      "id": "e15",
+      "timestamp": "2026-07-08T10:12:00+05:30",
+      "participantId": "p3",
+      "type": "transcript",
+      "payload": { "text": "Next question. How would you solve duplicate account detection at scale?", "durationSeconds": 6 }
+    },
+    {
+      "id": "e16",
+      "timestamp": "2026-07-08T10:12:30+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "I solved a similar problem in my project by hashing normalized account records and comparing signatures.", "durationSeconds": 24 }
+    }
+  ],
+  "notes": [
+    "The system should start uncertain — the display name is useless.",
+    "Confidence in p2 should grow from transcript role evidence, then jump when p2 renames to 'Ananya S'.",
+    "Expected outcome: initially uncertain, p2 selected by the end."
+  ]
+}

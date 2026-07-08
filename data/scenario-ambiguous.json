@@ -1,0 +1,72 @@
+{
+  "id": "ambiguous",
+  "name": "Ambiguous: two plausible candidates",
+  "description": "Two participants — 'Aman S' and 'A Singh' — both partially match candidate 'Aman Singh' and both give answer-style responses. The system should refuse to guess.",
+  "expectedCandidateParticipantId": null,
+  "metadata": {
+    "candidateName": "Aman Singh",
+    "scheduledStartTime": "2026-07-08T10:00:00+05:30",
+    "interviewerNames": ["Priya Mehta"],
+    "interviewerEmails": ["priya.mehta@sherlock.sh"],
+    "calendarInviteText": "Interview for Aman Singh with Priya Mehta. Note: a shadow interviewer may join."
+  },
+  "participants": [
+    { "id": "p1", "displayName": "Priya Mehta", "email": "priya.mehta@sherlock.sh", "isHost": true },
+    { "id": "p2", "displayName": "Aman S" },
+    { "id": "p3", "displayName": "A Singh" }
+  ],
+  "events": [
+    { "id": "e1", "timestamp": "2026-07-08T09:56:00+05:30", "participantId": "p1", "type": "join", "payload": {} },
+    { "id": "e2", "timestamp": "2026-07-08T10:01:00+05:30", "participantId": "p2", "type": "join", "payload": {} },
+    { "id": "e3", "timestamp": "2026-07-08T10:02:30+05:30", "participantId": "p3", "type": "join", "payload": {} },
+    { "id": "e4", "timestamp": "2026-07-08T10:02:45+05:30", "participantId": "p2", "type": "webcam_on", "payload": {} },
+    { "id": "e5", "timestamp": "2026-07-08T10:03:00+05:30", "participantId": "p3", "type": "webcam_on", "payload": {} },
+    {
+      "id": "e6",
+      "timestamp": "2026-07-08T10:03:30+05:30",
+      "participantId": "p1",
+      "type": "transcript",
+      "payload": { "text": "Thanks for joining. Can you introduce yourself?", "durationSeconds": 5 }
+    },
+    {
+      "id": "e7",
+      "timestamp": "2026-07-08T10:03:45+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "Hi, I am Aman. I worked on a payments reconciliation service last year.", "durationSeconds": 15 }
+    },
+    {
+      "id": "e8",
+      "timestamp": "2026-07-08T10:04:10+05:30",
+      "participantId": "p3",
+      "type": "transcript",
+      "payload": { "text": "Hello, Aman here as well — I am currently finishing my degree and I built a chat application recently.", "durationSeconds": 16 }
+    },
+    {
+      "id": "e9",
+      "timestamp": "2026-07-08T10:06:00+05:30",
+      "participantId": "p1",
+      "type": "transcript",
+      "payload": { "text": "Right — tell me about the most recent project on your resume.", "durationSeconds": 6 }
+    },
+    {
+      "id": "e10",
+      "timestamp": "2026-07-08T10:06:20+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "My project handled settlement matching and I implemented the retry logic.", "durationSeconds": 18 }
+    },
+    {
+      "id": "e11",
+      "timestamp": "2026-07-08T10:07:00+05:30",
+      "participantId": "p3",
+      "type": "transcript",
+      "payload": { "text": "On my side, I built the realtime sync layer and my experience is mostly in WebSocket infrastructure.", "durationSeconds": 17 }
+    }
+  ],
+  "notes": [
+    "Both p2 and p3 sit at the same name-match tier against 'Aman Singh' and both sound like candidates.",
+    "No candidate email exists to break the tie.",
+    "Expected outcome: status stays 'uncertain' — a wrong confident identification would be worse than abstaining."
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "id": "clear-match",
+  "name": "Clear candidate match",
+  "description": "Baseline happy path: the candidate joins with their real name and email, answers questions, and every signal agrees.",
+  "expectedCandidateParticipantId": "p2",
+  "metadata": {
+    "candidateName": "Jay Chhichhia",
+    "candidateEmail": "jay.chhichhia@example.com",
+    "scheduledStartTime": "2026-07-08T10:00:00+05:30",
+    "scheduledEndTime": "2026-07-08T11:00:00+05:30",
+    "interviewerNames": ["Priya Mehta", "Arjun Rao"],
+    "interviewerEmails": ["priya.mehta@sherlock.sh", "arjun.rao@sherlock.sh"],
+    "calendarInviteText": "Technical interview for Jay Chhichhia with Priya Mehta and Arjun Rao.",
+    "jobRole": "Software Engineering Intern"
+  },
+  "participants": [
+    { "id": "p1", "displayName": "Priya Mehta", "email": "priya.mehta@sherlock.sh", "isHost": true },
+    { "id": "p2", "displayName": "Jay Chhichhia", "email": "jay.chhichhia@example.com" },
+    { "id": "p3", "displayName": "Arjun Rao", "email": "arjun.rao@sherlock.sh" }
+  ],
+  "events": [
+    { "id": "e1", "timestamp": "2026-07-08T09:55:00+05:30", "participantId": "p1", "type": "join", "payload": {} },
+    { "id": "e2", "timestamp": "2026-07-08T09:57:00+05:30", "participantId": "p3", "type": "join", "payload": {} },
+    { "id": "e3", "timestamp": "2026-07-08T09:57:30+05:30", "participantId": "p1", "type": "webcam_on", "payload": {} },
+    { "id": "e4", "timestamp": "2026-07-08T10:00:30+05:30", "participantId": "p2", "type": "join", "payload": {} },
+    { "id": "e5", "timestamp": "2026-07-08T10:01:00+05:30", "participantId": "p2", "type": "webcam_on", "payload": {} },
+    { "id": "e6", "timestamp": "2026-07-08T10:01:20+05:30", "participantId": "p3", "type": "webcam_on", "payload": {} },
+    {
+      "id": "e7",
+      "timestamp": "2026-07-08T10:02:00+05:30",
+      "participantId": "p1",
+      "type": "transcript",
+      "payload": { "text": "Thanks for joining. Let's start — can you introduce yourself and walk us through your background?", "durationSeconds": 8 }
+    },
+    {
+      "id": "e8",
+      "timestamp": "2026-07-08T10:02:15+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "Hi, my name is Jay. I am currently pursuing my B.Tech and I built a paper-trading simulator using Next.js and Supabase.", "durationSeconds": 20 }
+    },
+    {
+      "id": "e9",
+      "timestamp": "2026-07-08T10:04:00+05:30",
+      "participantId": "p3",
+      "type": "transcript",
+      "payload": { "text": "Nice. Tell me about the hardest bug you faced in that simulator.", "durationSeconds": 6 }
+    },
+    {
+      "id": "e10",
+      "timestamp": "2026-07-08T10:04:20+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "I worked on the order-matching logic, and my project had a race condition in trade settlement that I solved with optimistic locking.", "durationSeconds": 28 }
+    },
+    { "id": "e11", "timestamp": "2026-07-08T10:06:00+05:30", "participantId": "p2", "type": "speech_activity", "payload": { "durationSeconds": 40 } },
+    {
+      "id": "e12",
+      "timestamp": "2026-07-08T10:08:00+05:30",
+      "participantId": "p1",
+      "type": "transcript",
+      "payload": { "text": "Could you walk me through how you would design a rate limiter for our API?", "durationSeconds": 7 }
+    },
+    {
+      "id": "e13",
+      "timestamp": "2026-07-08T10:08:30+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "I would approach it with a token bucket per client. During my internship I implemented something similar with Redis.", "durationSeconds": 25 }
+    },
+    { "id": "e14", "timestamp": "2026-07-08T10:12:00+05:30", "participantId": "p2", "type": "screen_share_start", "payload": {} }
+  ],
+  "notes": [
+    "All signals agree: name, email, join timing, transcript role, and interviewer exclusion.",
+    "Expected outcome: p2 selected with high confidence."
+  ]
+}

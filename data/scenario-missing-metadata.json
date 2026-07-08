@@ -1,0 +1,71 @@
+{
+  "id": "missing-metadata",
+  "name": "Missing candidate name (email only)",
+  "description": "The recruiter never entered a candidate name — only an email. The system must lean on the email local-part, behavior, and timing without treating missing data as negative.",
+  "expectedCandidateParticipantId": "p2",
+  "metadata": {
+    "candidateEmail": "neha.verma@example.com",
+    "scheduledStartTime": "2026-07-08T10:00:00+05:30",
+    "interviewerNames": ["Priya Mehta", "Arjun Rao"],
+    "interviewerEmails": ["priya.mehta@sherlock.sh"],
+    "calendarInviteText": "Interview scheduled by recruiting. Candidate email: neha.verma@example.com."
+  },
+  "participants": [
+    { "id": "p1", "displayName": "Priya Mehta", "email": "priya.mehta@sherlock.sh", "isHost": true },
+    { "id": "p2", "displayName": "Neha V" },
+    { "id": "p3", "displayName": "Arjun Rao" }
+  ],
+  "events": [
+    { "id": "e1", "timestamp": "2026-07-08T09:57:00+05:30", "participantId": "p1", "type": "join", "payload": {} },
+    { "id": "e2", "timestamp": "2026-07-08T09:59:00+05:30", "participantId": "p3", "type": "join", "payload": {} },
+    { "id": "e3", "timestamp": "2026-07-08T10:02:00+05:30", "participantId": "p2", "type": "join", "payload": {} },
+    { "id": "e4", "timestamp": "2026-07-08T10:02:20+05:30", "participantId": "p2", "type": "webcam_on", "payload": {} },
+    {
+      "id": "e5",
+      "timestamp": "2026-07-08T10:03:00+05:30",
+      "participantId": "p1",
+      "type": "transcript",
+      "payload": { "text": "Thanks for joining. Can you introduce yourself and tell me about your recent work?", "durationSeconds": 6 }
+    },
+    {
+      "id": "e6",
+      "timestamp": "2026-07-08T10:03:15+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "Sure. My name is Neha, I am currently a data engineering intern and I worked on streaming pipelines.", "durationSeconds": 18 }
+    },
+    {
+      "id": "e7",
+      "timestamp": "2026-07-08T10:05:00+05:30",
+      "participantId": "p3",
+      "type": "transcript",
+      "payload": { "text": "Tell me about a pipeline failure you debugged.", "durationSeconds": 5 }
+    },
+    {
+      "id": "e8",
+      "timestamp": "2026-07-08T10:05:20+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "I solved a backpressure issue in Kafka — my project was dropping events under load and I implemented dead-letter queues.", "durationSeconds": 26 }
+    },
+    { "id": "e9", "timestamp": "2026-07-08T10:07:00+05:30", "participantId": "p2", "type": "speech_activity", "payload": { "durationSeconds": 35 } },
+    {
+      "id": "e10",
+      "timestamp": "2026-07-08T10:08:00+05:30",
+      "participantId": "p1",
+      "type": "transcript",
+      "payload": { "text": "Could you walk me through your schema design approach?", "durationSeconds": 6 }
+    },
+    {
+      "id": "e11",
+      "timestamp": "2026-07-08T10:08:20+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "I would approach it with a star schema. During my internship I designed the fact tables for billing events.", "durationSeconds": 22 }
+    }
+  ],
+  "notes": [
+    "Candidate name is absent — the name signal must fall back to the email local-part 'neha.verma' resembling 'Neha V'.",
+    "Expected outcome: p2 selected with moderate confidence; evidence explicitly mentions the missing name."
+  ]
+}

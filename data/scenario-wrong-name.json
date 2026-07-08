@@ -1,0 +1,72 @@
+{
+  "id": "wrong-name",
+  "name": "Interviewer entered the wrong candidate name",
+  "description": "The recruiter typed 'Amit Shah' but the real candidate is 'Amit Sharma'. The email local-part and behavior must override the incorrect name metadata.",
+  "expectedCandidateParticipantId": "p2",
+  "metadata": {
+    "candidateName": "Amit Shah",
+    "candidateEmail": "amit.sharma@example.com",
+    "scheduledStartTime": "2026-07-08T10:00:00+05:30",
+    "interviewerNames": ["Priya Mehta", "Rohan Gupta"],
+    "interviewerEmails": ["priya.mehta@sherlock.sh"],
+    "calendarInviteText": "Interview for Amit Shah (amit.sharma@example.com) with Priya Mehta and Rohan Gupta."
+  },
+  "participants": [
+    { "id": "p1", "displayName": "Priya Mehta", "email": "priya.mehta@sherlock.sh", "isHost": true },
+    { "id": "p2", "displayName": "Amit Sharma", "email": "amit.sharma@example.com" },
+    { "id": "p3", "displayName": "Rohan Gupta" }
+  ],
+  "events": [
+    { "id": "e1", "timestamp": "2026-07-08T09:56:00+05:30", "participantId": "p1", "type": "join", "payload": {} },
+    { "id": "e2", "timestamp": "2026-07-08T09:58:30+05:30", "participantId": "p3", "type": "join", "payload": {} },
+    { "id": "e3", "timestamp": "2026-07-08T10:01:30+05:30", "participantId": "p2", "type": "join", "payload": {} },
+    { "id": "e4", "timestamp": "2026-07-08T10:02:00+05:30", "participantId": "p2", "type": "webcam_on", "payload": {} },
+    {
+      "id": "e5",
+      "timestamp": "2026-07-08T10:02:30+05:30",
+      "participantId": "p1",
+      "type": "transcript",
+      "payload": { "text": "Thanks for joining. Let's start — can you introduce yourself?", "durationSeconds": 5 }
+    },
+    {
+      "id": "e6",
+      "timestamp": "2026-07-08T10:02:45+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "Hi, my name is Amit Sharma. I am currently a backend developer and I worked on payment gateway integrations.", "durationSeconds": 20 }
+    },
+    {
+      "id": "e7",
+      "timestamp": "2026-07-08T10:04:30+05:30",
+      "participantId": "p3",
+      "type": "transcript",
+      "payload": { "text": "Tell me about the toughest integration you handled.", "durationSeconds": 5 }
+    },
+    {
+      "id": "e8",
+      "timestamp": "2026-07-08T10:04:50+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "I solved a double-charge bug in a UPI flow — my project processed refunds idempotently after that.", "durationSeconds": 24 }
+    },
+    { "id": "e9", "timestamp": "2026-07-08T10:06:30+05:30", "participantId": "p2", "type": "speech_activity", "payload": { "durationSeconds": 32 } },
+    {
+      "id": "e10",
+      "timestamp": "2026-07-08T10:07:30+05:30",
+      "participantId": "p1",
+      "type": "transcript",
+      "payload": { "text": "Could you walk me through how you would design webhook retries?", "durationSeconds": 6 }
+    },
+    {
+      "id": "e11",
+      "timestamp": "2026-07-08T10:07:50+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "I would approach it with exponential backoff and a dead-letter queue. During my internship I implemented exactly this.", "durationSeconds": 22 }
+    }
+  ],
+  "notes": [
+    "'Amit Sharma' vs metadata name 'Amit Shah' only reaches the shared-token tier — but the exact email match and candidate-style answers resolve the conflict.",
+    "Expected outcome: p2 selected; evidence surfaces the name/email conflict instead of hiding it."
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "id": "nickname",
+  "name": "Nickname / partial display name",
+  "description": "The candidate joins as 'Rohit K' — an abbreviated form of 'Rohit Kulkarni'. Partial name matching plus behavior should still identify them.",
+  "expectedCandidateParticipantId": "p2",
+  "metadata": {
+    "candidateName": "Rohit Kulkarni",
+    "candidateEmail": "rohit.kulkarni@example.com",
+    "scheduledStartTime": "2026-07-08T10:00:00+05:30",
+    "interviewerNames": ["Priya Mehta", "Arjun Rao"],
+    "interviewerEmails": ["priya.mehta@sherlock.sh", "arjun.rao@sherlock.sh"],
+    "calendarInviteText": "Frontend interview for Rohit Kulkarni with Priya Mehta and Arjun Rao."
+  },
+  "participants": [
+    { "id": "p1", "displayName": "Priya Mehta", "email": "priya.mehta@sherlock.sh", "isHost": true },
+    { "id": "p2", "displayName": "Rohit K" },
+    { "id": "p3", "displayName": "Arjun Rao", "email": "arjun.rao@sherlock.sh" }
+  ],
+  "events": [
+    { "id": "e1", "timestamp": "2026-07-08T09:56:00+05:30", "participantId": "p1", "type": "join", "payload": {} },
+    { "id": "e2", "timestamp": "2026-07-08T09:58:00+05:30", "participantId": "p3", "type": "join", "payload": {} },
+    { "id": "e3", "timestamp": "2026-07-08T10:01:00+05:30", "participantId": "p2", "type": "join", "payload": {} },
+    { "id": "e4", "timestamp": "2026-07-08T10:01:30+05:30", "participantId": "p2", "type": "webcam_on", "payload": {} },
+    {
+      "id": "e5",
+      "timestamp": "2026-07-08T10:02:00+05:30",
+      "participantId": "p1",
+      "type": "transcript",
+      "payload": { "text": "Thanks for joining. Can you introduce yourself?", "durationSeconds": 5 }
+    },
+    {
+      "id": "e6",
+      "timestamp": "2026-07-08T10:02:10+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "Hi, my name is Rohit. I am currently in my final year and I have experience with React and TypeScript.", "durationSeconds": 18 }
+    },
+    {
+      "id": "e7",
+      "timestamp": "2026-07-08T10:04:00+05:30",
+      "participantId": "p3",
+      "type": "transcript",
+      "payload": { "text": "Tell me about a UI performance problem you fixed.", "durationSeconds": 5 }
+    },
+    {
+      "id": "e8",
+      "timestamp": "2026-07-08T10:04:15+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "I worked on a dashboard where list re-renders were slow, and I solved it with memoization and virtualization.", "durationSeconds": 24 }
+    },
+    { "id": "e9", "timestamp": "2026-07-08T10:06:00+05:30", "participantId": "p2", "type": "speech_activity", "payload": { "durationSeconds": 30 } },
+    {
+      "id": "e10",
+      "timestamp": "2026-07-08T10:07:00+05:30",
+      "participantId": "p1",
+      "type": "transcript",
+      "payload": { "text": "Could you walk me through your approach to state management?", "durationSeconds": 6 }
+    },
+    {
+      "id": "e11",
+      "timestamp": "2026-07-08T10:07:20+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "I would approach it with server state in React Query. My project used that pattern heavily.", "durationSeconds": 20 }
+    },
+    { "id": "e12", "timestamp": "2026-07-08T10:09:00+05:30", "participantId": "p3", "type": "webcam_on", "payload": {} }
+  ],
+  "notes": [
+    "'Rohit K' should match 'Rohit Kulkarni' at the token-plus-initial tier (0.65), not full strength.",
+    "Expected outcome: p2 selected via partial name + transcript + join timing."
+  ]
+}

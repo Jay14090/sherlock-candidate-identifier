@@ -1,0 +1,90 @@
+{
+  "id": "multiple-interviewers-observers",
+  "name": "Multiple interviewers + silent observer",
+  "description": "One interviewer dominates speaking time and a silent observer lurks with webcam off. Raw speaking duration alone would pick the wrong person.",
+  "expectedCandidateParticipantId": "p2",
+  "metadata": {
+    "candidateName": "Vikram Nair",
+    "candidateEmail": "vikram.nair@example.com",
+    "scheduledStartTime": "2026-07-08T10:00:00+05:30",
+    "interviewerNames": ["Priya Mehta", "Rohan Gupta"],
+    "interviewerEmails": ["priya.mehta@sherlock.sh", "rohan.gupta@sherlock.sh"],
+    "calendarInviteText": "System design interview for Vikram Nair with Priya Mehta and Rohan Gupta. HR may observe."
+  },
+  "participants": [
+    { "id": "p1", "displayName": "Priya Mehta", "email": "priya.mehta@sherlock.sh", "isHost": true },
+    { "id": "p2", "displayName": "Vikram Nair" },
+    { "id": "p3", "displayName": "Rohan Gupta", "email": "rohan.gupta@sherlock.sh" },
+    { "id": "p4", "displayName": "Meeting Observer" }
+  ],
+  "events": [
+    { "id": "e1", "timestamp": "2026-07-08T09:54:00+05:30", "participantId": "p1", "type": "join", "payload": {} },
+    { "id": "e2", "timestamp": "2026-07-08T09:56:00+05:30", "participantId": "p3", "type": "join", "payload": {} },
+    { "id": "e3", "timestamp": "2026-07-08T10:00:45+05:30", "participantId": "p2", "type": "join", "payload": {} },
+    { "id": "e4", "timestamp": "2026-07-08T10:01:00+05:30", "participantId": "p2", "type": "webcam_on", "payload": {} },
+    {
+      "id": "e5",
+      "timestamp": "2026-07-08T10:01:30+05:30",
+      "participantId": "p1",
+      "type": "transcript",
+      "payload": { "text": "Thanks for joining. Let's start with introductions — our team runs the fraud platform. Can you introduce yourself?", "durationSeconds": 15 }
+    },
+    {
+      "id": "e6",
+      "timestamp": "2026-07-08T10:02:00+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "Hi, my name is Vikram. I am currently working as a teaching assistant and I built a distributed job scheduler last semester.", "durationSeconds": 20 }
+    },
+    { "id": "e7", "timestamp": "2026-07-08T10:03:00+05:30", "participantId": "p4", "type": "join", "payload": {} },
+    { "id": "e8", "timestamp": "2026-07-08T10:03:10+05:30", "participantId": "p4", "type": "webcam_off", "payload": {} },
+    {
+      "id": "e9",
+      "timestamp": "2026-07-08T10:04:00+05:30",
+      "participantId": "p1",
+      "type": "transcript",
+      "payload": { "text": "Great. Tell me about how you would design a URL shortener. Could you walk me through the storage layer first? The role involves a lot of system design.", "durationSeconds": 25 }
+    },
+    {
+      "id": "e10",
+      "timestamp": "2026-07-08T10:05:00+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "I would approach it with a key-generation service. I used a similar design when I worked on the scheduler project.", "durationSeconds": 30 }
+    },
+    { "id": "e11", "timestamp": "2026-07-08T10:06:00+05:30", "participantId": "p1", "type": "speech_activity", "payload": { "durationSeconds": 60 } },
+    {
+      "id": "e12",
+      "timestamp": "2026-07-08T10:08:00+05:30",
+      "participantId": "p3",
+      "type": "transcript",
+      "payload": { "text": "Next question. How would you solve hot-key contention in that store?", "durationSeconds": 8 }
+    },
+    {
+      "id": "e13",
+      "timestamp": "2026-07-08T10:08:30+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "I solved a similar issue before — my project sharded counters and batched writes to smooth the load.", "durationSeconds": 26 }
+    },
+    {
+      "id": "e14",
+      "timestamp": "2026-07-08T10:10:00+05:30",
+      "participantId": "p1",
+      "type": "transcript",
+      "payload": { "text": "Interesting. Can you explain the trade-offs versus consistent hashing? Do you have any questions for us afterwards?", "durationSeconds": 18 }
+    },
+    {
+      "id": "e15",
+      "timestamp": "2026-07-08T10:10:40+05:30",
+      "participantId": "p2",
+      "type": "transcript",
+      "payload": { "text": "Consistent hashing rebalances better. In my experience the sharded-counter approach is simpler to operate at our scale.", "durationSeconds": 22 }
+    }
+  ],
+  "notes": [
+    "p1 speaks the most (including a 60s monologue) but must be penalized as a known interviewer with question-style turns.",
+    "p4 joins late, stays silent with webcam off — classic observer.",
+    "Expected outcome: p2 selected; p1 and p4 score low."
+  ]
+}
