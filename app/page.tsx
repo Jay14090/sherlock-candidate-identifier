@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import CandidateMetadataPanel from '@/components/CandidateMetadataPanel';
-import ConfidenceHistoryChart from '@/components/ConfidenceHistoryChart';
+import ScoreHistoryChart from '@/components/ScoreHistoryChart';
 import EventTimeline from '@/components/EventTimeline';
 import ExplanationPanel from '@/components/ExplanationPanel';
 import ParticipantCard from '@/components/ParticipantCard';
@@ -87,9 +87,11 @@ export default function Home() {
           </div>
           <span
             className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${STATUS_STYLES[decision.status]}`}
+            title="Candidate score is an evidence-based score, not a calibrated probability."
           >
             {statusLabel(decision.status)}
-            {decision.status === 'selected' && ` · ${Math.round(decision.confidence * 100)}%`}
+            {decision.status === 'selected' &&
+              ` · score ${Math.round(decision.candidateScore * 100)}%`}
           </span>
         </div>
       </header>
@@ -135,8 +137,8 @@ export default function Home() {
             })}
           </div>
 
-          <ConfidenceHistoryChart
-            history={state.confidenceHistory}
+          <ScoreHistoryChart
+            history={state.scoreHistory}
             participantOrder={state.participantOrder}
             participants={state.participants}
             colors={colors}

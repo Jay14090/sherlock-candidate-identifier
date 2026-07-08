@@ -1,8 +1,8 @@
 import { SELECTION_THRESHOLD } from '@/lib/constants';
-import type { ConfidenceHistoryEntry, ParticipantId, ParticipantRuntimeState } from '@/lib/types';
+import type { ParticipantId, ParticipantRuntimeState, ScoreHistoryEntry } from '@/lib/types';
 
-interface ConfidenceHistoryChartProps {
-  history: ConfidenceHistoryEntry[];
+interface ScoreHistoryChartProps {
+  history: ScoreHistoryEntry[];
   participantOrder: ParticipantId[];
   participants: Record<ParticipantId, ParticipantRuntimeState>;
   colors: Record<ParticipantId, string>;
@@ -13,12 +13,12 @@ const HEIGHT = 180;
 const PAD_X = 8;
 const PAD_Y = 10;
 
-export default function ConfidenceHistoryChart({
+export default function ScoreHistoryChart({
   history,
   participantOrder,
   participants,
   colors,
-}: ConfidenceHistoryChartProps) {
+}: ScoreHistoryChartProps) {
   const n = history.length;
 
   const x = (index: number) =>
@@ -28,15 +28,15 @@ export default function ConfidenceHistoryChart({
   return (
     <section className="rounded-xl border border-slate-800 bg-slate-900 p-4">
       <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-        Confidence Over Time
+        Candidate Score Over Time
       </h2>
       {n < 2 ? (
         <p className="py-8 text-center text-xs text-slate-600">
-          The confidence timeline appears after a few events are processed.
+          The score timeline appears after a few events are processed.
         </p>
       ) : (
         <>
-          <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="w-full" role="img" aria-label="Participant confidence over time">
+          <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="w-full" role="img" aria-label="Participant candidate scores over time">
             {/* selection threshold */}
             <line
               x1={PAD_X}

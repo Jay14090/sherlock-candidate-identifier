@@ -1,3 +1,4 @@
+import { ALL_SIGNAL_CATEGORIES, coverageLabel } from '@/lib/scorer';
 import type { CandidateDecision, EvidenceItem } from '@/lib/types';
 
 interface ExplanationPanelProps {
@@ -52,7 +53,9 @@ export default function ExplanationPanel({ decision }: ExplanationPanelProps) {
       {top && (
         <div className="mt-4">
           <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-            Evidence for top participant — {top.displayName} ({top.confidencePercent}%)
+            Evidence for top participant — {top.displayName} · score {top.scorePercent}% · coverage{' '}
+            {coverageLabel(top.evidenceCoverage)} ({top.activeSignalCategories.length}/
+            {ALL_SIGNAL_CATEGORIES.length} signals)
           </h3>
           <ul className="divide-y divide-slate-800/60">
             {top.evidence.map((item, i) => (
@@ -65,7 +68,7 @@ export default function ExplanationPanel({ decision }: ExplanationPanelProps) {
       {decision.status === 'uncertain' && runnerUp && (
         <div className="mt-4 border-t border-slate-800 pt-3">
           <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-amber-500/90">
-            Competing evidence — {runnerUp.displayName} ({runnerUp.confidencePercent}%)
+            Competing evidence — {runnerUp.displayName} · score {runnerUp.scorePercent}%
           </h3>
           <ul className="divide-y divide-slate-800/60">
             {runnerUp.evidence
@@ -77,6 +80,11 @@ export default function ExplanationPanel({ decision }: ExplanationPanelProps) {
           </ul>
         </div>
       )}
+
+      <p className="mt-4 border-t border-slate-800 pt-2 text-[10px] italic text-slate-600">
+        Candidate score is an evidence-based score, not a calibrated probability. Evidence coverage
+        measures how many signal categories have usable data, independent of what they indicate.
+      </p>
     </section>
   );
 }

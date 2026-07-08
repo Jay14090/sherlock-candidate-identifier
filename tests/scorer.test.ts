@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { getScenarioById, scenarios } from '@/data/scenarios';
 import { createRuntimeState, runScenarioToEnd, stepForward } from '@/lib/mockMeetingEngine';
-import type { MeetingScenario, ParticipantScore } from '@/lib/types';
+import { scoreEmailMatch } from '@/lib/scorer';
+import type { MeetingScenario, ParticipantRuntimeState, ParticipantScore } from '@/lib/types';
 
 function mustGet(id: string): MeetingScenario {
   const scenario = getScenarioById(id);
@@ -15,24 +16,106 @@ function scoreOf(scores: ParticipantScore[], participantId: string): Participant
   return found;
 }
 
-describe('decision lifecycle', () => {
-  it('starts with insufficient data before enough events are processed', () => {
-    const scenario = mustGet('clear-match');
+function makeParticipant(overrides: Partial<ParticipantRuntimeState>): ParticipantRuntimeState {
+  return {
+    id: 'px',
+    currentDisplayName: 'Test Person',
+    joined: true,
+    webcamOn: null,
+    screenSharing: false,
+    hasEverScreenShared: false,
+    screenShareWhileCandidateLike: false,
+    totalSpeakingSeconds: 0,
+    speakingTurnCount: 0,
+    utterances: [],
+    nameHistory: ['Test Person'],
+    ...overrides,
+  };
+}
+
+describe('decision lifecycle (useful-evidence rule)', () => {
+  it('starts with insufficient data before anyone joins', () => {
+    const state = createRuntimeState(mustGet('clear-match'));
+    expect(state.decision.status).toBe('insufficient_data');
+  });
+
+  it('never selects anyone while the leader only has generic events (joins/webcam)', () => {
+    const scenario = mustGet('device-name');
     let state = createRuntimeState(scenario);
+    // First 5 events are joins + webcam only; the leader (device-name p2)
+    // has no identity, email, or transcript evidence yet.
+    for (let i = 0; i < 5; i++) {
+      state = stepForward(state);
+      expect(state.decision.status).not.toBe('selected');
+    }
     expect(state.decision.status).toBe('insufficient_data');
-    state = stepForward(state); // 1 event
-    state = stepForward(state); // 2 events
-    expect(state.decision.status).toBe('insufficient_data');
+  });
+
+  it('becomes decidable once useful transcript evidence exists for the leader', () => {
+    const scenario = mustGet('device-name');
+    let state = createRuntimeState(scenario);
+    for (let i = 0; i < 7; i++) state = stepForward(state); // through p2's first utterance
+    expect(['uncertain', 'selected']).toContain(state.decision.status);
+  });
+});
+
+describe('email matching (public vs organization domains)', () => {
+  const metadataWith = (candidateEmail: string) => ({
+    candidateEmail,
+    scheduledStartTime: '2026-07-08T10:00:00+05:30',
+    interviewerNames: [],
+  });
+
+  it('treats a shared public domain as neutral, not supporting evidence', () => {
+    const result = scoreEmailMatch(
+      metadataWith('jay@gmail.com'),
+      makeParticipant({ email: 'random@gmail.com' }),
+    );
+    expect(result.score).toBe(0.4);
+  });
+
+  it('keeps weak support for a shared organization-specific domain', () => {
+    const result = scoreEmailMatch(
+      metadataWith('jay@acme-corp.com'),
+      makeParticipant({ email: 'someone.else@acme-corp.com' }),
+    );
+    expect(result.score).toBe(0.25);
+  });
+
+  it('still scores exact matches on public domains as strong evidence', () => {
+    const result = scoreEmailMatch(
+      metadataWith('jay@gmail.com'),
+      makeParticipant({ email: 'jay@gmail.com' }),
+    );
+    expect(result.score).toBe(1);
+  });
+});
+
+describe('evidence coverage', () => {
+  it('reports high coverage for the selected candidate at the end of clear-match', () => {
+    const finalState = runScenarioToEnd(mustGet('clear-match'));
+    const p2 = scoreOf(finalState.decision.scores, 'p2');
+    expect(p2.evidenceCoverage).toBeGreaterThanOrEqual(0.6);
+    expect(p2.activeSignalCategories).toContain('identity');
+    expect(p2.activeSignalCategories).toContain('transcript');
+  });
+
+  it('exposes the leader coverage on the decision and keeps it within bounds', () => {
+    for (const scenario of scenarios) {
+      const finalState = runScenarioToEnd(scenario);
+      expect(finalState.decision.evidenceCoverage).toBeGreaterThanOrEqual(0);
+      expect(finalState.decision.evidenceCoverage).toBeLessThanOrEqual(1);
+    }
   });
 });
 
 describe('clear-match scenario', () => {
   const finalState = runScenarioToEnd(mustGet('clear-match'));
 
-  it('selects the correct candidate with high confidence', () => {
+  it('selects the correct candidate with a high candidate score', () => {
     expect(finalState.decision.status).toBe('selected');
     expect(finalState.decision.selectedParticipantId).toBe('p2');
-    expect(finalState.decision.confidence).toBeGreaterThan(0.75);
+    expect(finalState.decision.candidateScore).toBeGreaterThan(0.75);
   });
 
   it('scores the known interviewer far below the candidate', () => {

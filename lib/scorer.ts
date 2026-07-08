@@ -2,8 +2,8 @@ import {
   CANDIDATE_TURN_LIKELIHOOD,
   INTERVIEWER_TURN_LIKELIHOOD,
   MARGIN_THRESHOLD,
-  MIN_EVENTS_FOR_DECISION,
   NEUTRAL_SCORE,
+  PUBLIC_EMAIL_DOMAINS,
   SELECTION_THRESHOLD,
   SIGNAL_WEIGHTS,
   SILENCE_EVENT_THRESHOLD,
@@ -26,6 +26,7 @@ import type {
   ParticipantRuntimeState,
   ParticipantScore,
   SignalBreakdown,
+  SignalCategory,
 } from './types';
 
 interface SignalResult {
@@ -175,8 +176,14 @@ export function scoreEmailMatch(
     score = 0.75;
     message = 'Participant email has the same local-part as the candidate email but a different domain.';
   } else if (emailDomain(candidate) === emailDomain(actual)) {
-    score = 0.25;
-    message = 'Participant email only shares the domain with the candidate email — weak and possibly coincidental.';
+    // A shared public domain (gmail.com etc.) carries no identity information.
+    if (PUBLIC_EMAIL_DOMAINS.includes(emailDomain(candidate))) {
+      score = NEUTRAL_SCORE;
+      message = `Both emails use the public provider ${emailDomain(candidate)} — this is coincidental, so email evidence stays neutral.`;
+    } else {
+      score = 0.25;
+      message = 'Participant email shares an organization-specific domain with the candidate email — weak supporting evidence only.';
+    }
   } else {
     score = 0.1;
     message = 'Participant email does not match the candidate email.';
@@ -438,7 +445,7 @@ export function scoreTranscriptLikelihood(participant: ParticipantRuntimeState):
   const avgInterviewer =
     utterances.reduce((sum, u) => sum + u.analysis.interviewerLikelihood, 0) / utterances.length;
 
-  // Small confidence bonus as consistent evidence accumulates.
+  // Small bonus as consistent evidence accumulates.
   const countBonus = Math.min(0.08, 0.02 * utterances.length);
   const candidateScore = clamp01(Math.min(0.95, avgCandidate + (avgCandidate > 0.5 ? countBonus : 0)));
   const interviewerScore = clamp01(avgInterviewer);
@@ -583,6 +590,104 @@ export function scoreConsistency(
 }
 
 /* ------------------------------------------------------------------ */
+/* Evidence coverage + decision eligibility                            */
+/* ------------------------------------------------------------------ */
+
+export const ALL_SIGNAL_CATEGORIES: SignalCategory[] = [
+  'identity',
+  'email',
+  'transcript',
+  'speaking',
+  'interviewerExclusion',
+  'joinTiming',
+  'webcam',
+  'screenShare',
+  'consistency',
+];
+
+/** Categories strong enough to justify a decision on their own. */
+const STRONG_SIGNAL_CATEGORIES: SignalCategory[] = ['identity', 'email', 'transcript'];
+/** Media-state categories are too generic to establish decision eligibility. */
+const WEAK_SIGNAL_CATEGORIES: SignalCategory[] = ['webcam', 'screenShare'];
+
+/**
+ * Which signal categories have *usable evidence* for this participant —
+ * independent of whether that evidence points toward or away from them
+ * being the candidate. This powers the evidence-coverage metric and the
+ * insufficient-data rule.
+ */
+export function getActiveSignalCategories(
+  metadata: CandidateMetadata,
+  participant: ParticipantRuntimeState,
+  meetingTranscriptEventCount: number,
+): SignalCategory[] {
+  const active: SignalCategory[] = [];
+  const { candidateTurns, interviewerTurns } = countRoleTurns(participant);
+
+  // Identity: we can compare a usable person-name against candidate identity.
+  const hasUsableName = !isDeviceLikeName(participant.currentDisplayName);
+  if (hasUsableName && (metadata.candidateName || metadata.candidateEmail)) {
+    active.push('identity');
+  }
+
+  if (metadata.candidateEmail && participant.email) active.push('email');
+  if (participant.utterances.length > 0) active.push('transcript');
+
+  // Speaking is informative once the participant speaks — or once their
+  // silence becomes meaningful because the meeting is active around them.
+  if (
+    participant.speakingTurnCount > 0 ||
+    participant.utterances.length > 0 ||
+    (participant.joined && meetingTranscriptEventCount >= SILENCE_EVENT_THRESHOLD)
+  ) {
+    active.push('speaking');
+  }
+
+  // Interviewer exclusion is informative when the participant actually matched
+  // the interviewer list, or produced enough role-classified turns to judge.
+  if (metadata.interviewerNames.length > 0 || metadata.interviewerEmails?.length) {
+    const emailMatched =
+      participant.email !== undefined &&
+      (metadata.interviewerEmails ?? []).some(
+        (e) => e.toLowerCase() === participant.email!.toLowerCase(),
+      );
+    const nameMatched = metadata.interviewerNames.some((interviewerName) =>
+      [participant.currentDisplayName, ...participant.nameHistory].some(
+        (name) => compareNames(interviewerName, name).score >= 0.65,
+      ),
+    );
+    if (emailMatched || nameMatched || candidateTurns + interviewerTurns >= 2) {
+      active.push('interviewerExclusion');
+    }
+  }
+
+  if (participant.joinTime && !Number.isNaN(Date.parse(metadata.scheduledStartTime))) {
+    active.push('joinTiming');
+  }
+  if (participant.webcamOn !== null) active.push('webcam');
+  if (participant.hasEverScreenShared) active.push('screenShare');
+  if (participant.nameHistory.length > 1) active.push('consistency');
+
+  return active;
+}
+
+/**
+ * A participant is eligible to be *decided on* only when useful evidence
+ * exists: at least one strong category (identity/email/transcript), or at
+ * least two distinct non-media categories. Generic events alone — a join
+ * plus a webcam toggle — must never produce a selection.
+ */
+export function isEligibleForDecision(
+  participant: ParticipantRuntimeState,
+  activeCategories: SignalCategory[],
+): boolean {
+  if (!participant.joined) return false;
+  if (activeCategories.some((c) => STRONG_SIGNAL_CATEGORIES.includes(c))) return true;
+  const nonMedia = activeCategories.filter((c) => !WEAK_SIGNAL_CATEGORIES.includes(c));
+  return nonMedia.length >= 2;
+}
+
+/* ------------------------------------------------------------------ */
 /* Aggregate scoring + decision                                        */
 /* ------------------------------------------------------------------ */
 
@@ -667,12 +772,20 @@ export function scoreParticipant(
     ...consistency.evidence,
   ]);
 
+  const activeSignalCategories = getActiveSignalCategories(
+    metadata,
+    participant,
+    meetingTranscriptEventCount,
+  );
+
   return {
     participantId: participant.id,
     displayName: participant.currentDisplayName,
     score: round4(clamp01(smoothed)),
     rawScore: round4(rawScore),
-    confidencePercent: Math.round(clamp01(smoothed) * 100),
+    scorePercent: Math.round(clamp01(smoothed) * 100),
+    evidenceCoverage: round4(activeSignalCategories.length / ALL_SIGNAL_CATEGORIES.length),
+    activeSignalCategories,
     breakdown,
     evidence,
   };
@@ -700,10 +813,18 @@ export function scoreMeetingState(
   const second = joinedSorted[1];
   const margin = top ? round4(top.score - (second?.score ?? 0)) : 0;
 
+  // Useful-evidence rule: the current leader must have real evidence behind
+  // them (identity/email/transcript, or two distinct non-media categories)
+  // before any decision is attempted. Joins and webcam toggles alone are not
+  // enough — no matter how many of them there are.
+  const topEligible =
+    top !== undefined &&
+    isEligibleForDecision(state.participants[top.participantId], top.activeSignalCategories);
+
   let status: CandidateDecision['status'];
   let selectedParticipantId: CandidateDecision['selectedParticipantId'];
 
-  if (!top || state.processedEvents.length < MIN_EVENTS_FOR_DECISION) {
+  if (!top || !topEligible) {
     status = 'insufficient_data';
     selectedParticipantId = null;
   } else if (top.score >= SELECTION_THRESHOLD && margin >= MARGIN_THRESHOLD) {
@@ -717,11 +838,24 @@ export function scoreMeetingState(
   return {
     selectedParticipantId,
     status,
-    confidence: top ? top.score : 0,
-    marginFromSecond: margin,
+    candidateScore: top ? top.score : 0,
+    evidenceCoverage: top ? top.evidenceCoverage : 0,
+    marginToRunnerUp: margin,
+    runnerUpParticipantId: second?.participantId ?? null,
     explanation: buildExplanation(status, top, second, margin),
     scores: sorted,
   };
+}
+
+/** Human-readable label for an evidence-coverage fraction. */
+export function coverageLabel(coverage: number): 'Low' | 'Medium' | 'High' {
+  if (coverage >= 0.6) return 'High';
+  if (coverage >= 0.35) return 'Medium';
+  return 'Low';
+}
+
+function coveragePhrase(top: ParticipantScore): string {
+  return `${coverageLabel(top.evidenceCoverage).toLowerCase()} (${top.activeSignalCategories.length} of ${ALL_SIGNAL_CATEGORIES.length} signal categories active)`;
 }
 
 function buildExplanation(
@@ -731,7 +865,7 @@ function buildExplanation(
   margin: number,
 ): string {
   if (status === 'insufficient_data' || !top) {
-    return 'Insufficient data. The meeting has not yet produced enough identity, transcript, or behavior signals to make a reliable decision. Waiting for join, identity, or transcript signals.';
+    return 'Insufficient data. Waiting for useful identity, email, or transcript evidence — generic events such as joins and webcam changes are not enough to decide on. No participant is selected yet.';
   }
 
   const marginPoints = Math.round(margin * 100);
@@ -743,16 +877,16 @@ function buildExplanation(
       .map((e) => stripTrailingPeriod(lowercaseFirst(e.message)));
     const support = positives.length > 0 ? ` The decision is supported by: ${positives.join('; ')}.` : '';
     const marginNote = second
-      ? ` Confidence is ${marginPoints >= 20 ? 'high' : 'adequate'} because "${top.displayName}" is ${marginPoints} points ahead of the next best participant ("${second.displayName}").`
+      ? ` The lead is ${marginPoints >= 20 ? 'comfortable' : 'adequate'}: "${top.displayName}" is ${marginPoints} points ahead of the next best participant ("${second.displayName}").`
       : '';
-    return `Selected "${top.displayName}" as the likely candidate with ${top.confidencePercent}% confidence.${support}${marginNote}`;
+    return `Selected "${top.displayName}" as the likely candidate. Candidate score: ${top.scorePercent}% (evidence-based, not a calibrated probability) with ${coveragePhrase(top)} evidence coverage.${support}${marginNote}`;
   }
 
   // Uncertain
   if (second && margin < MARGIN_THRESHOLD) {
-    return `Candidate uncertain. "${top.displayName}" and "${second.displayName}" both have plausible evidence, but the confidence margin is only ${marginPoints} points — below the safe selection threshold. The system needs more transcript or verified identity evidence before selecting a participant.`;
+    return `Candidate uncertain because the margin is too low. "${top.displayName}" (score ${top.scorePercent}%) and "${second.displayName}" (score ${second.scorePercent}%) both have plausible evidence, but the margin is only ${marginPoints} points — below the safe selection threshold. Evidence coverage for the leader is ${coveragePhrase(top)}. The system needs more transcript or verified identity evidence before selecting a participant.`;
   }
-  return `Candidate uncertain. The top participant "${top.displayName}" has only ${top.confidencePercent}% confidence, below the ${Math.round(SELECTION_THRESHOLD * 100)}% selection threshold. The system needs more evidence before selecting a participant.`;
+  return `Candidate uncertain because the score is too low. The top participant "${top.displayName}" has a candidate score of ${top.scorePercent}%, below the ${Math.round(SELECTION_THRESHOLD * 100)}% selection threshold. Evidence coverage is ${coveragePhrase(top)}. The system needs more evidence before selecting a participant.`;
 }
 
 function capitalize(text: string): string {

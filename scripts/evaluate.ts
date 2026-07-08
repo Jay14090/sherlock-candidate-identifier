@@ -1,6 +1,11 @@
 /**
  * Runs every scenario start-to-finish and prints an evaluation table:
- * expected vs actual candidate, final confidence, margin, and status.
+ * expected vs actual candidate, final candidate score, evidence coverage,
+ * margin, and status.
+ *
+ * Note: candidate score is an evidence-based score, not a calibrated
+ * probability, and this is controlled behavioral validation on synthetic
+ * scenarios — not a real-world accuracy benchmark.
  *
  * Usage: npm run evaluate
  */
@@ -11,7 +16,8 @@ interface EvalRow {
   scenario: string;
   expected: string;
   actual: string;
-  confidence: string;
+  candidateScore: string;
+  coverage: string;
   margin: string;
   status: string;
   correct: boolean;
@@ -31,19 +37,30 @@ const rows: EvalRow[] = scenarios.map((scenario) => {
     scenario: scenario.id,
     expected,
     actual,
-    confidence: decision.confidence.toFixed(2),
-    margin: decision.marginFromSecond.toFixed(2),
+    candidateScore: decision.candidateScore.toFixed(2),
+    coverage: decision.evidenceCoverage.toFixed(2),
+    margin: decision.marginToRunnerUp.toFixed(2),
     status: decision.status,
     correct,
   };
 });
 
-const header = ['Scenario', 'Expected', 'Actual', 'Confidence', 'Margin', 'Status', 'Correct'];
+const header = [
+  'Scenario',
+  'Expected',
+  'Actual',
+  'Candidate score',
+  'Coverage',
+  'Margin',
+  'Status',
+  'Pass',
+];
 const table = rows.map((r) => [
   r.scenario,
   r.expected,
   r.actual,
-  r.confidence,
+  r.candidateScore,
+  r.coverage,
   r.margin,
   r.status,
   r.correct ? 'YES' : 'NO',
@@ -58,14 +75,17 @@ for (const row of table) console.log(line(row));
 
 const correctCount = rows.filter((r) => r.correct).length;
 console.log(
-  `\n${correctCount}/${rows.length} scenarios produced the expected outcome ` +
+  `\nSynthetic scenario pass rate: ${correctCount}/${rows.length} ` +
     `(including correct abstention on ambiguous cases).`,
 );
 
 const selectedRows = rows.filter((r) => r.status === 'selected' && r.correct);
-const avgConfidence =
-  selectedRows.reduce((sum, r) => sum + Number(r.confidence), 0) / (selectedRows.length || 1);
-console.log(`Average confidence on correct selections: ${avgConfidence.toFixed(2)}`);
+const avgScore =
+  selectedRows.reduce((sum, r) => sum + Number(r.candidateScore), 0) / (selectedRows.length || 1);
+console.log(`Average candidate score on correct selections: ${avgScore.toFixed(2)}`);
+console.log(
+  'Note: controlled behavioral validation on synthetic scenarios — not a real-world accuracy benchmark.',
+);
 
 if (correctCount !== rows.length) {
   process.exitCode = 1;

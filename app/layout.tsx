@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Sherlock Candidate Identifier",
   description:
-    "Real-time multi-signal identification of the interview candidate among meeting participants, with confidence scoring and explainable evidence.",
+    "Real-time multi-signal identification of the interview candidate among meeting participants, with evidence-based candidate scoring and explainable reasoning.",
 };
 
 export default function RootLayout({

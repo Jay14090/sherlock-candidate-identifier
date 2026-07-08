@@ -1,7 +1,7 @@
 import type { SignalBreakdown } from './types';
 
 /**
- * Weights for the multi-signal confidence engine. They sum to 1.0 so the
+ * Weights for the multi-signal scoring engine. They sum to 1.0 so the
  * weighted sum is already normalized to the 0..1 range.
  *
  * Rationale:
@@ -29,8 +29,6 @@ export const SIGNAL_WEIGHTS: Record<keyof Omit<SignalBreakdown, 'transcriptInter
 export const SELECTION_THRESHOLD = 0.68;
 /** ...AND it leads the runner-up by at least this margin. */
 export const MARGIN_THRESHOLD = 0.12;
-/** Below this many processed events the system reports insufficient data. */
-export const MIN_EVENTS_FOR_DECISION = 3;
 
 /**
  * Neutral score used when a signal has no evidence either way.
@@ -111,6 +109,24 @@ export const INTERVIEWER_PATTERNS = [
   'our team',
   'the role involves',
   'can you share your screen',
+];
+
+/**
+ * Free/public email providers. A shared domain on one of these carries no
+ * identity information (two random gmail.com users are unrelated), so
+ * same-domain matching is neutral for them — only organization-specific
+ * domains give weak same-domain support.
+ */
+export const PUBLIC_EMAIL_DOMAINS = [
+  'gmail.com',
+  'yahoo.com',
+  'outlook.com',
+  'hotmail.com',
+  'icloud.com',
+  'proton.me',
+  'protonmail.com',
+  'live.com',
+  'msn.com',
 ];
 
 /** Speaking-pattern thresholds. */

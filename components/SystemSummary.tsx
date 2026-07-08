@@ -24,10 +24,12 @@ export default function SystemSummary({ decision }: SystemSummaryProps) {
         How Scoring Works
       </h2>
       <p className="mb-3 text-[11px] leading-relaxed text-slate-500">
-        Each participant gets a weighted score from nine weak signals. A candidate is only selected
-        when the top score reaches {Math.round(SELECTION_THRESHOLD * 100)}% <em>and</em> leads the
-        runner-up by {Math.round(MARGIN_THRESHOLD * 100)}+ points — otherwise the system honestly
-        reports uncertainty.
+        Each participant gets a weighted <strong>candidate score</strong> from nine weak signals — an
+        evidence-based score, not a calibrated probability. A candidate is only selected when the top
+        score reaches {Math.round(SELECTION_THRESHOLD * 100)}% <em>and</em> leads the runner-up by{' '}
+        {Math.round(MARGIN_THRESHOLD * 100)}+ points. Until the leader has useful identity, email, or
+        transcript evidence, the system reports insufficient data instead of deciding on generic
+        events.
       </p>
       <ul className="space-y-1">
         {(Object.keys(SIGNAL_WEIGHTS) as (keyof typeof SIGNAL_WEIGHTS)[]).map((key) => (
@@ -45,11 +47,19 @@ export default function SystemSummary({ decision }: SystemSummaryProps) {
           </li>
         ))}
       </ul>
-      <div className="mt-3 border-t border-slate-800 pt-2 text-[11px] text-slate-500">
-        Current margin over runner-up:{' '}
-        <span className="tabular-nums text-slate-300">
-          {Math.round(decision.marginFromSecond * 100)} pts
-        </span>
+      <div className="mt-3 space-y-0.5 border-t border-slate-800 pt-2 text-[11px] text-slate-500">
+        <div>
+          Current margin over runner-up:{' '}
+          <span className="tabular-nums text-slate-300">
+            {Math.round(decision.marginToRunnerUp * 100)} pts
+          </span>
+        </div>
+        <div>
+          Leader&apos;s evidence coverage:{' '}
+          <span className="tabular-nums text-slate-300">
+            {Math.round(decision.evidenceCoverage * 100)}%
+          </span>
+        </div>
       </div>
     </section>
   );

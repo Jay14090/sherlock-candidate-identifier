@@ -1,6 +1,7 @@
+import { coverageLabel } from '@/lib/scorer';
 import type { ParticipantRuntimeState, ParticipantScore } from '@/lib/types';
 import { formatSeconds } from '@/lib/utils';
-import ConfidenceBar from './ConfidenceBar';
+import ScoreBar from './ScoreBar';
 
 interface ParticipantCardProps {
   runtime: ParticipantRuntimeState;
@@ -59,9 +60,17 @@ export default function ParticipantCard({ runtime, score, isSelected, color }: P
         {runtime.webcamOn === false && <StateChip label="Webcam off" tone="off" />}
         {runtime.screenSharing && <StateChip label="Sharing screen" tone="ok" />}
         <StateChip label={`Spoke ${formatSeconds(runtime.totalSpeakingSeconds)}`} tone={runtime.totalSpeakingSeconds > 0 ? 'ok' : 'muted'} />
+        <StateChip
+          label={`Evidence: ${coverageLabel(score.evidenceCoverage)}`}
+          tone={score.evidenceCoverage >= 0.35 ? 'ok' : 'muted'}
+        />
       </div>
 
-      <ConfidenceBar value={score.score} emphasized={isSelected} />
+      <div
+        title={`Candidate score ${score.scorePercent}% — an evidence-based score, not a calibrated probability. Evidence coverage: ${score.activeSignalCategories.length}/9 signal categories (${score.activeSignalCategories.join(', ') || 'none'}).`}
+      >
+        <ScoreBar value={score.score} emphasized={isSelected} />
+      </div>
 
       {runtime.nameHistory.length > 1 && (
         <p className="mt-2 text-[10px] text-sky-400/80">

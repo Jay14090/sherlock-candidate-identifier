@@ -71,12 +71,33 @@ export interface SignalBreakdown {
   consistency: number;
 }
 
+/**
+ * The distinct kinds of evidence the engine can draw on. Used both for
+ * scoring and for the evidence-coverage metric (how much useful information
+ * is actually available for a participant, independent of how candidate-like
+ * they look).
+ */
+export type SignalCategory =
+  | 'identity'
+  | 'email'
+  | 'transcript'
+  | 'speaking'
+  | 'interviewerExclusion'
+  | 'joinTiming'
+  | 'webcam'
+  | 'screenShare'
+  | 'consistency';
+
 export interface ParticipantScore {
   participantId: ParticipantId;
   displayName: string;
-  score: number; // 0 to 1 (smoothed)
+  /** Evidence-based candidate score (smoothed), 0..1. NOT a calibrated probability. */
+  score: number;
   rawScore: number; // 0 to 1 (before temporal smoothing)
-  confidencePercent: number; // 0 to 100
+  scorePercent: number; // 0 to 100
+  /** Fraction of signal categories with usable evidence for this participant, 0..1. */
+  evidenceCoverage: number;
+  activeSignalCategories: SignalCategory[];
   breakdown: SignalBreakdown;
   evidence: EvidenceItem[];
 }
@@ -84,10 +105,32 @@ export interface ParticipantScore {
 export interface CandidateDecision {
   selectedParticipantId: ParticipantId | null;
   status: 'selected' | 'uncertain' | 'insufficient_data';
-  confidence: number;
-  marginFromSecond: number;
+  /** Candidate score of the top participant. Evidence-based, not a calibrated probability. */
+  candidateScore: number;
+  /** Evidence coverage of the top participant, 0..1. */
+  evidenceCoverage: number;
+  marginToRunnerUp: number;
+  runnerUpParticipantId: ParticipantId | null;
   explanation: string;
   scores: ParticipantScore[];
+}
+
+/**
+ * Production output contract — the shape a downstream consumer (Sherlock's
+ * fraud detectors) would receive on every update. The demo's
+ * CandidateDecision maps 1:1 onto this; meetingId/updatedAtEventId come from
+ * the event stream envelope.
+ */
+export interface CandidateIdentificationResult {
+  meetingId: string;
+  selectedParticipantId: string | null;
+  decision: 'insufficient_data' | 'uncertain' | 'selected';
+  candidateScore: number;
+  evidenceCoverage: number;
+  marginToRunnerUp: number;
+  runnerUpParticipantId: string | null;
+  evidence: EvidenceItem[];
+  updatedAtEventId: string;
 }
 
 export interface MeetingScenario {
@@ -140,7 +183,7 @@ export interface ParticipantRuntimeState {
   lastActivityTime?: string;
 }
 
-export interface ConfidenceHistoryEntry {
+export interface ScoreHistoryEntry {
   eventId: string;
   timestamp: string;
   scores: Record<ParticipantId, number>;
@@ -158,5 +201,5 @@ export interface MeetingRuntimeState {
   transcriptEventCount: number;
   decision: CandidateDecision;
   previousSmoothedScores: Record<ParticipantId, number>;
-  confidenceHistory: ConfidenceHistoryEntry[];
+  scoreHistory: ScoreHistoryEntry[];
 }

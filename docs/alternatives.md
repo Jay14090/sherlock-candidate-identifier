@@ -55,4 +55,4 @@ The chosen approach is a **deterministic multi-signal scoring engine with option
 
 ## Final decision
 
-> A deterministic multi-signal confidence engine with explicit evidence, honest abstention, and clean extension seams for LLM classification, learned ranking, and real platform adapters.
+> A deterministic multi-signal scoring engine with explicit evidence, honest abstention, and clean extension seams for LLM classification, learned ranking, and real platform adapters.

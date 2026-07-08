@@ -14,7 +14,7 @@ import type {
  * Deterministic event replay engine.
  *
  * Events are applied one at a time through a pure reducer; after every event
- * the full scoring engine re-runs and the decision + confidence history are
+ * the full scoring engine re-runs and the decision + score history are
  * updated. In production the same reducer would sit behind a WebSocket/Kafka
  * consumer receiving real platform events instead of scenario JSON.
  */
@@ -59,7 +59,7 @@ export function createRuntimeState(scenario: MeetingScenario): MeetingRuntimeSta
     currentEventIndex: 0,
     transcriptEventCount: 0,
     previousSmoothedScores: {},
-    confidenceHistory: [],
+    scoreHistory: [],
   };
 
   return { ...base, decision: scoreMeetingState(base) };
@@ -144,7 +144,7 @@ function reduceParticipant(
   return next;
 }
 
-/** Applies one meeting event, re-scores every participant, and appends to the confidence history. */
+/** Applies one meeting event, re-scores every participant, and appends to the score history. */
 export function applyMeetingEvent(
   state: MeetingRuntimeState,
   event: MeetingEvent,
@@ -183,8 +183,8 @@ export function applyMeetingEvent(
     currentEventIndex: state.currentEventIndex + 1,
     decision,
     previousSmoothedScores,
-    confidenceHistory: [
-      ...state.confidenceHistory,
+    scoreHistory: [
+      ...state.scoreHistory,
       {
         eventId: event.id,
         timestamp: event.timestamp,

@@ -1,9 +1,10 @@
-interface ConfidenceBarProps {
-  value: number; // 0..1
+interface ScoreBarProps {
+  /** Candidate score, 0..1 — an evidence-based score, not a calibrated probability. */
+  value: number;
   emphasized?: boolean;
 }
 
-export default function ConfidenceBar({ value, emphasized = false }: ConfidenceBarProps) {
+export default function ScoreBar({ value, emphasized = false }: ScoreBarProps) {
   const percent = Math.round(value * 100);
   const color =
     value >= 0.68 ? 'bg-emerald-500' : value >= 0.45 ? 'bg-amber-500' : 'bg-slate-500';
