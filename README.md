@@ -2,6 +2,8 @@
 
 **An AI-assisted real-time system that identifies the actual interview candidate among all meeting participants** — built for the Sherlock Internship Challenge.
 
+**Live demo: https://jay14090.github.io/sherlock-candidate-identifier/**
+
 ![Dashboard — clear match scenario](docs/screenshots/clear-match.png)
 
 ## Problem
@@ -17,6 +19,8 @@ Sherlock detects fraud during live interviews on Google Meet, Microsoft Teams, a
 - Two participants look equally plausible
 
 ## Demo
+
+Try it instantly at **https://jay14090.github.io/sherlock-candidate-identifier/** — or run locally:
 
 ```bash
 npm install
