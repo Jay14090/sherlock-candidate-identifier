@@ -46,6 +46,8 @@ Deterministic role classification: counts first-person experience phrases (candi
 
 Deterministic-first was a deliberate choice: reproducible tests, zero latency, zero cost, no API keys — and the demo's evaluation numbers mean something because they can't vary run to run.
 
+The swap is not hypothetical: `lib/transcriptAnalyzer.llm.ts` implements the same interface with Claude (structured outputs), and the dashboard's **Classifier panel** lets a reviewer run it live with their own API key — the scenario's transcript events are re-classified semantically and the replay re-scores with the LLM analyses, falling back to the deterministic classifier on any error. The production cascade (deterministic → embeddings → selective LLM) is designed in [production-ingestion.md](production-ingestion.md#5-the-full-llm-in-production).
+
 ### Scoring engine — `lib/scorer.ts`
 
 Per participant, computes nine signal scores (each 0–1 with neutral = 0.4), emits evidence for every signal, and combines them with fixed weights (sum = 1.0). Key design decisions:

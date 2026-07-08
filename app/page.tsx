@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import CandidateMetadataPanel from '@/components/CandidateMetadataPanel';
+import ClassifierPanel, { type ClassifierMode, type LlmStatus } from '@/components/ClassifierPanel';
 import ScoreHistoryChart from '@/components/ScoreHistoryChart';
 import EventTimeline from '@/components/EventTimeline';
 import ExplanationPanel from '@/components/ExplanationPanel';
@@ -10,8 +11,14 @@ import ReplayControls from '@/components/ReplayControls';
 import ScenarioSelector from '@/components/ScenarioSelector';
 import SystemSummary from '@/components/SystemSummary';
 import { scenarios } from '@/data/scenarios';
-import { createRuntimeState, isFinished, stepForward } from '@/lib/mockMeetingEngine';
-import type { ParticipantId } from '@/lib/types';
+import {
+  classifyTranscriptEvents,
+  createRuntimeState,
+  isFinished,
+  stepForward,
+} from '@/lib/mockMeetingEngine';
+import { createLlmTranscriptClassifier } from '@/lib/transcriptAnalyzer.llm';
+import type { ParticipantId, TranscriptAnalysis } from '@/lib/types';
 import { statusLabel } from '@/lib/utils';
 
 const BASE_INTERVAL_MS = 1500;
@@ -35,6 +42,18 @@ export default function Home() {
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
 
+  // Optional LLM classification (opt-in; deterministic keywords by default).
+  const [classifierMode, setClassifierMode] = useState<ClassifierMode>('deterministic');
+  const [apiKey, setApiKey] = useState('');
+  const [llmModel, setLlmModel] = useState('claude-opus-4-8');
+  const [llmStatus, setLlmStatus] = useState<LlmStatus>('idle');
+  const [llmProgress, setLlmProgress] = useState({ done: 0, total: 0 });
+  const [llmError, setLlmError] = useState<string | null>(null);
+  const [llmAnalyses, setLlmAnalyses] = useState<Record<string, TranscriptAnalysis> | null>(null);
+
+  const activeAnalyses =
+    classifierMode === 'llm' && llmStatus === 'ready' && llmAnalyses ? llmAnalyses : undefined;
+
   const finished = isFinished(state);
   // Derived, not synced: when the replay runs out of events the interval
   // stops on its own and the controls fall back to their idle appearance.
@@ -57,15 +76,37 @@ export default function Home() {
   const handleScenarioChange = (id: string) => {
     setScenarioId(id);
     reset(id);
+    // LLM analyses are per-scenario; a new scenario needs a fresh run.
+    setLlmAnalyses(null);
+    setLlmStatus('idle');
+    setLlmError(null);
   };
+
+  const runLlmClassification = useCallback(async () => {
+    setLlmStatus('classifying');
+    setLlmError(null);
+    try {
+      const classifier = createLlmTranscriptClassifier({ apiKey, model: llmModel });
+      const analyses = await classifyTranscriptEvents(scenario.events, classifier, (done, total) =>
+        setLlmProgress({ done, total }),
+      );
+      setLlmAnalyses(analyses);
+      setLlmStatus('ready');
+      reset(scenario.id); // replay from the start with LLM analyses applied
+    } catch (error) {
+      setLlmAnalyses(null);
+      setLlmStatus('error');
+      setLlmError(error instanceof Error ? error.message : 'Classification failed');
+    }
+  }, [apiKey, llmModel, scenario, reset]);
 
   useEffect(() => {
     if (!effectivePlaying) return;
     const interval = setInterval(() => {
-      setState((current) => stepForward(current));
+      setState((current) => stepForward(current, activeAnalyses));
     }, BASE_INTERVAL_MS / speed);
     return () => clearInterval(interval);
-  }, [effectivePlaying, speed]);
+  }, [effectivePlaying, speed, activeAnalyses]);
 
   const { decision } = state;
   const scoreByParticipant = useMemo(
@@ -104,6 +145,18 @@ export default function Home() {
             selectedId={scenarioId}
             onSelect={handleScenarioChange}
           />
+          <ClassifierPanel
+            mode={classifierMode}
+            onModeChange={setClassifierMode}
+            apiKey={apiKey}
+            onApiKeyChange={setApiKey}
+            model={llmModel}
+            onModelChange={setLlmModel}
+            status={llmStatus}
+            progress={llmProgress}
+            error={llmError}
+            onRun={runLlmClassification}
+          />
           <CandidateMetadataPanel metadata={scenario.metadata} />
           <SystemSummary decision={decision} />
         </div>
@@ -115,7 +168,7 @@ export default function Home() {
             finished={finished}
             speed={speed}
             onPlayPause={() => setPlaying((p) => !p)}
-            onStep={() => setState((current) => stepForward(current))}
+            onStep={() => setState((current) => stepForward(current, activeAnalyses))}
             onReset={() => reset(scenarioId)}
             onSpeedChange={setSpeed}
           />

@@ -52,6 +52,12 @@ Scenario: **Ambiguous: two plausible candidates**. Press Play.
 >
 > Final state: 68% versus 66%. A two-point margin. The system says 'Candidate uncertain', shows the competing evidence side by side, and names the fix: more transcript or verified identity evidence. In production this is where you'd route to a human reviewer instead of feeding the wrong person's video to the fraud detectors."
 
+## 6b. Optional — live LLM classification (if you have an API key handy)
+
+Switch the Classifier panel to **LLM (Claude)**, paste a key, run classification on the device-name scenario, then replay.
+
+> "One more thing — the transcript classifier is swappable. This panel re-classifies the same utterances with Claude through the exact same interface: semantic role understanding instead of keywords, structured outputs so the response is guaranteed-parseable JSON, and automatic fallback to the deterministic classifier if anything fails. The scoring engine didn't change at all — that's the point of the interface seam. In production this runs as a cascade: keywords first, embeddings second, the LLM only on ambiguous utterances."
+
 ## 7. Trade-offs (7:45 – 8:45)
 
 > "Deliberate choices: simulated events instead of platform OAuth — the hard problem is reasoning, and simulation makes every edge case reproducible. Deterministic keyword transcript classification instead of an LLM — reproducible evaluation, zero keys, zero latency; the LLM upgrade path is one interface away. No face recognition — consent-sensitive, fails with cameras off, and role identification isn't identity verification.

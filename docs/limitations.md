@@ -4,13 +4,13 @@ An honest account of what this prototype does not do. Framing note: the evaluati
 
 ## Data & integration
 
-1. **Mock data only.** All meetings are hand-authored JSON scenarios. No live Google Meet / Zoom / Teams integration; no real audio/video processing. The event schema is production-shaped, but the adapter layer is unbuilt.
+1. **Mock data only.** All meetings are hand-authored JSON scenarios. No live Google Meet / Zoom / Teams integration; no real audio/video processing. The event schema is production-shaped, but the adapter layer is unbuilt — the full acquisition design (platform APIs, meeting bots, streaming ASR, webcam-state derivation) is worked through in [production-ingestion.md](production-ingestion.md).
 2. **Evaluation circularity.** The scenarios were authored alongside the weight tuning, so the 7/7 pass rate carries selection bias. Real-world accuracy is unknown and would require a labeled calibration set.
 3. **Simulated timing.** Events replay on a UI timer, not at true wall-clock intervals; production would need to handle out-of-order events, duplicate webhooks, and clock skew.
 
 ## Signals
 
-4. **Transcript role classification is intentionally simple in the offline demo** and should be replaced by a semantic classifier in production. Keyword matching is vulnerable to paraphrase, transcription noise, and deliberate evasion, and is English-only. The `TranscriptRoleClassifier` interface and the staged upgrade path (embeddings → selective LLM → multilingual → calibration) exist for exactly this reason — see [scoring.md](scoring.md#transcript-classifier-roadmap).
+4. **Transcript role classification is intentionally simple in the default offline demo** and should be replaced by a semantic classifier in production. Keyword matching is vulnerable to paraphrase, transcription noise, and deliberate evasion, and is English-only. A working Claude-backed classifier behind the same interface ships in the dashboard as an opt-in mode (`lib/transcriptAnalyzer.llm.ts`), demonstrating the swap — but the default evaluation deliberately does not depend on it. Upgrade path: [scoring.md](scoring.md#transcript-classifier-roadmap).
 5. **No audio understanding.** Speaking events carry only duration — no voice continuity, no diarization correction, no prosody. Two people sharing one microphone are attributed as one participant.
 6. **No visual understanding.** Webcam state is a boolean; the system cannot distinguish an empty chair from an attentive candidate, and offers no deepfake/liveness signal of its own.
 7. **Quiet candidates are hard.** A candidate who barely speaks in a long panel discussion accumulates silence penalties; the system would likely stay `uncertain` — the intended failure mode, but still an unresolved meeting.

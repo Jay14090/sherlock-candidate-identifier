@@ -133,11 +133,15 @@ Platform bot / meeting adapter (Meet · Zoom · Teams)
 
 The demo replays mock JSON events, but they flow through the exact event schema and pure reducer a real adapter would feed — swapping the JSON source for a WebSocket/Kafka consumer changes nothing in the engine. The immutable runtime state serializes cleanly, so meetings shard across workers and every historical decision can be replayed and re-explained for audits. Component walkthrough: [docs/architecture.md](docs/architecture.md).
 
+**How live data actually gets acquired from real calls** — Zoom RTMS/Meeting SDK, Google Meet Media API, Teams media bots, meeting-bot vendors, streaming ASR + diarization for live transcripts, webcam-state derivation, the Kafka backbone, and the consent/privacy story — is worked through end-to-end in [docs/production-ingestion.md](docs/production-ingestion.md).
+
 ## AI/ML Approach
 
-The demo uses **deterministic transcript classification** for reproducibility, zero API keys, and stable evaluation — every run of `npm run evaluate` produces identical numbers, which makes regressions detectable and claims checkable.
+The engine defaults to **deterministic transcript classification** for reproducibility, zero API keys, and stable evaluation — every run of `npm run evaluate` produces identical numbers, which makes regressions detectable and claims checkable.
 
-The architecture exposes a `TranscriptRoleClassifier` interface, so a production deployment can replace the keyword classifier with an LLM, an embedding model, or a hybrid semantic classifier **without changing the scoring engine**. A drop-in example of an LLM-backed classifier (using structured outputs, invoked selectively for ambiguous utterances) is included at [`lib/transcriptAnalyzer.llm.example.ts`](lib/transcriptAnalyzer.llm.example.ts) — it is illustrative and not required to run the demo. The staged upgrade path (deterministic → embeddings → selective LLM → multilingual → calibration on labeled data) is in [docs/scoring.md](docs/scoring.md#transcript-classifier-roadmap).
+The architecture exposes a `TranscriptRoleClassifier` interface, so the classifier can be swapped **without changing the scoring engine** — and the dashboard proves it: the **Classifier panel** has an opt-in LLM mode ([`lib/transcriptAnalyzer.llm.ts`](lib/transcriptAnalyzer.llm.ts)). Paste an Anthropic API key (kept in browser memory only, sent only to api.anthropic.com), pick a model, and the scenario's transcript is re-classified by Claude with structured outputs — semantic role understanding instead of keywords, with automatic fallback to the deterministic classifier on any error. The default demo and the entire evaluation remain fully offline.
+
+The production LLM design — a deterministic → embeddings → LLM cascade, self-hosted fine-tuned models for data-sensitive clients, cost/latency math, and why training a foundation model from scratch is the wrong call — is in [docs/production-ingestion.md](docs/production-ingestion.md#5-the-full-llm-in-production). The classifier upgrade path is in [docs/scoring.md](docs/scoring.md#transcript-classifier-roadmap).
 
 ## Demo Scenarios
 

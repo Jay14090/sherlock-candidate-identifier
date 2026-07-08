@@ -7,7 +7,9 @@ import type {
   ParticipantId,
   ParticipantRuntimeState,
   SpeechPayload,
+  TranscriptAnalysis,
   TranscriptPayload,
+  TranscriptRoleClassifier,
 } from './types';
 
 /**
@@ -69,6 +71,7 @@ export function createRuntimeState(scenario: MeetingScenario): MeetingRuntimeSta
 function reduceParticipant(
   participant: ParticipantRuntimeState,
   event: MeetingEvent,
+  transcriptAnalysisOverride?: TranscriptAnalysis,
 ): ParticipantRuntimeState {
   const next: ParticipantRuntimeState = {
     ...participant,
@@ -131,7 +134,9 @@ function reduceParticipant(
           text,
           durationSeconds: payload.durationSeconds ?? 0,
           timestamp: event.timestamp,
-          analysis: analyzeTranscript(text),
+          // A pre-computed analysis (e.g. from the LLM classifier) wins;
+          // otherwise fall back to the deterministic keyword classifier.
+          analysis: transcriptAnalysisOverride ?? analyzeTranscript(text),
         },
       ];
       next.totalSpeakingSeconds =
@@ -148,10 +153,14 @@ function reduceParticipant(
 export function applyMeetingEvent(
   state: MeetingRuntimeState,
   event: MeetingEvent,
+  transcriptAnalysisOverride?: TranscriptAnalysis,
 ): MeetingRuntimeState {
   const participant = state.participants[event.participantId];
   const participants = participant
-    ? { ...state.participants, [event.participantId]: reduceParticipant(participant, event) }
+    ? {
+        ...state.participants,
+        [event.participantId]: reduceParticipant(participant, event, transcriptAnalysisOverride),
+      }
     : state.participants;
 
   const processedEvents = [...state.processedEvents, event];
@@ -196,10 +205,43 @@ export function applyMeetingEvent(
   };
 }
 
-/** Advances the replay by one event. Returns the same state when the scenario is finished. */
-export function stepForward(state: MeetingRuntimeState): MeetingRuntimeState {
+/**
+ * Advances the replay by one event. Returns the same state when the scenario
+ * is finished. When `transcriptAnalyses` is provided (e.g. LLM classification
+ * results keyed by event id), transcript events use those analyses instead of
+ * the deterministic classifier; events without an entry fall back gracefully.
+ */
+export function stepForward(
+  state: MeetingRuntimeState,
+  transcriptAnalyses?: Record<string, TranscriptAnalysis>,
+): MeetingRuntimeState {
   if (state.currentEventIndex >= state.allEvents.length) return state;
-  return applyMeetingEvent(state, state.allEvents[state.currentEventIndex]);
+  const event = state.allEvents[state.currentEventIndex];
+  return applyMeetingEvent(state, event, transcriptAnalyses?.[event.id]);
+}
+
+/**
+ * Classifies every transcript event in a list with the given classifier
+ * (sequentially, to stay gentle on rate limits) and returns analyses keyed
+ * by event id. Throws on the first classifier error — callers fall back to
+ * the deterministic classifier and surface the message.
+ */
+export async function classifyTranscriptEvents(
+  events: MeetingEvent[],
+  classifier: TranscriptRoleClassifier,
+  onProgress?: (done: number, total: number) => void,
+): Promise<Record<string, TranscriptAnalysis>> {
+  const transcriptEvents = events.filter((e) => e.type === 'transcript');
+  const analyses: Record<string, TranscriptAnalysis> = {};
+  let done = 0;
+  onProgress?.(0, transcriptEvents.length);
+  for (const event of transcriptEvents) {
+    const text = String((event.payload as unknown as TranscriptPayload).text ?? '');
+    analyses[event.id] = await classifier.classify(text);
+    done += 1;
+    onProgress?.(done, transcriptEvents.length);
+  }
+  return analyses;
 }
 
 export function isFinished(state: MeetingRuntimeState): boolean {
