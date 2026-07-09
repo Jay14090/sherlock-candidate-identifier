@@ -37,7 +37,7 @@ The chosen approach is a **deterministic multi-signal scoring engine with option
 - Cost and latency per event are poor fits for a per-utterance real-time loop.
 - Confidence calibration is opaque; an LLM saying "90% sure" is not a calibrated probability, while a weighted evidence sum is inspectable point by point.
 
-**Where it fits later:** the `TranscriptRoleClassifier` interface in `lib/transcriptAnalyzer.ts` is exactly the seam — swap keyword matching for an LLM with structured outputs to classify utterance roles, keep the scoring engine unchanged. Best of both: semantic robustness inside, deterministic aggregation outside.
+**Where it fits later:** the `TranscriptRoleClassifier` interface in `lib/transcriptRoleClassifier.ts` is exactly the seam — swap the offline hybrid (rules + example-bank similarity) for an LLM with structured outputs to classify utterance roles, keep the scoring engine unchanged (an opt-in Claude classifier already sits behind it in `lib/classifiers/llmTranscriptClassifier.ts`). Best of both: semantic robustness inside, deterministic aggregation outside.
 
 ## Alternative E — Real Google Meet / Zoom / Teams integration
 

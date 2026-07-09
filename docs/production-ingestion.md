@@ -74,7 +74,7 @@ All three plug into the existing `TranscriptRoleClassifier` seam:
 
 | Option | Pros | Cons | When |
 |---|---|---|---|
-| **Hosted frontier LLM (Claude via API)** — implemented in `lib/transcriptAnalyzer.llm.ts`, demoable today from the dashboard's Classifier panel | Best semantic quality immediately; structured outputs guarantee parseable results; zero ML-ops | Per-call cost/latency; interview text leaves the VPC (needs DPA; zero-retention options) | Phase 1 production; the ambiguous-utterance tier |
+| **Hosted frontier LLM (Claude via API)** — implemented in `lib/classifiers/llmTranscriptClassifier.ts`, demoable today from the dashboard's Classifier panel | Best semantic quality immediately; structured outputs guarantee parseable results; zero ML-ops | Per-call cost/latency; interview text leaves the VPC (needs DPA; zero-retention options) | Phase 1 production; the ambiguous-utterance tier |
 | **Fine-tuned open-weights model, self-hosted** (e.g. an 8B-class model fine-tuned on labeled interview utterances, served via vLLM) | Data never leaves infra (interviews are sensitive!); ~10–50 ms latency; marginal cost ≈ GPU amortization; can be trained on Sherlock's own labeled corpus | Needs labeled data + ML-ops; quality ceiling below frontier models until tuned | Phase 2, once the human-review loop has produced a few thousand labeled utterances |
 | **Embedding similarity** (utterance embedding vs labeled candidate/interviewer example bank) | ~1 ms, ~free, multilingual | Coarser than a generative classifier | The cheap middle tier in the cascade below |
 
@@ -85,9 +85,10 @@ Training a foundation LLM from scratch is **not** on this list deliberately: hun
 Running a frontier LLM on **every** utterance is wasteful; most utterances are obvious. Production shape:
 
 ```
-utterance ─→ deterministic keywords (0 ms, free)
+utterance ─→ deterministic phrase rules (0 ms, free)
      │  confident (likelihood ≤0.3 or ≥0.7)? → done
-     └→ embedding similarity (~1 ms, ~free)
+     └→ embedding similarity (~1 ms, ~free — the demo's bag-of-words
+        example bank is the offline stand-in for this tier)
           │  confident? → done
           └→ LLM classifier (only ambiguous residue, ~10–30% of utterances)
 ```

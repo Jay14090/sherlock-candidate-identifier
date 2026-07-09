@@ -1,20 +1,25 @@
 /**
- * LLM-backed transcript role classifier — the semantic upgrade to the
- * deterministic keyword classifier, behind the same `TranscriptRoleClassifier`
+ * LLM-backed transcript role classifier — the semantic-understanding upgrade
+ * to the offline hybrid classifier, behind the same `TranscriptRoleClassifier`
  * interface, so the scoring engine needs zero changes.
  *
  * Wired into the dashboard as an OPT-IN mode: the demo runs fully offline on
- * the deterministic classifier by default; users can paste their own
- * Anthropic API key in the Classifier panel to re-classify a scenario's
- * transcript with Claude. The key lives only in component state (never
- * persisted, never sent anywhere except api.anthropic.com).
+ * the hybrid (rules + semantic-similarity) classifier by default; users can
+ * paste their own Anthropic API key in the Classifier panel to re-classify a
+ * scenario's transcript with Claude. The key lives only in component state
+ * (never persisted, never sent anywhere except api.anthropic.com).
  *
  * Uses raw `fetch` (with Anthropic's browser-access header) so the project
  * keeps zero runtime dependencies and works from a static-hosted demo. A
  * server-side production deployment should use the official SDK
- * (`@anthropic-ai/sdk`) and keep the key server-side.
+ * (`@anthropic-ai/sdk`) and keep the key server-side — see
+ * `llmTranscriptClassifier.example.ts` for that sketch.
  */
-import type { TranscriptAnalysis, TranscriptRoleClassifier } from './types';
+import type {
+  TranscriptRole,
+  TranscriptRoleClassifier,
+  TranscriptRoleResult,
+} from '../transcriptRoleClassifier';
 
 const CLASSIFIER_SYSTEM_PROMPT = `You classify utterances from job-interview transcripts.
 For each utterance, estimate:
@@ -57,6 +62,15 @@ export interface LlmClassifierConfig {
   model?: string;
 }
 
+/** Likelihood gap below which the utterance is reported as neutral. */
+const ROLE_MARGIN = 0.1;
+
+function deriveRole(candidateLikelihood: number, interviewerLikelihood: number): TranscriptRole {
+  if (candidateLikelihood >= interviewerLikelihood + ROLE_MARGIN) return 'candidate';
+  if (interviewerLikelihood >= candidateLikelihood + ROLE_MARGIN) return 'interviewer';
+  return 'neutral';
+}
+
 /**
  * Creates a Claude-backed TranscriptRoleClassifier using the Messages API
  * with structured outputs, so the response is guaranteed to be valid JSON
@@ -68,7 +82,7 @@ export function createLlmTranscriptClassifier(
   const model = config.model ?? 'claude-opus-4-8';
 
   return {
-    async classify(text: string): Promise<TranscriptAnalysis> {
+    async classifyUtterance(text: string): Promise<TranscriptRoleResult> {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -109,12 +123,25 @@ export function createLlmTranscriptClassifier(
       }
       const parsed = JSON.parse(textBlock.text) as LlmClassification;
 
+      const candidateLikelihood = clamp01(parsed.candidateLikelihood);
+      const interviewerLikelihood = clamp01(parsed.interviewerLikelihood);
+      const role = deriveRole(candidateLikelihood, interviewerLikelihood);
+      const reasons = [`LLM (${model}): ${parsed.summary}`];
+
       return {
-        candidateLikelihood: clamp01(parsed.candidateLikelihood),
-        interviewerLikelihood: clamp01(parsed.interviewerLikelihood),
-        matchedCandidatePatterns: [],
-        matchedInterviewerPatterns: [],
-        summary: `LLM (${model}): ${parsed.summary}`,
+        role,
+        score: role === 'neutral' ? 0.5 : Math.max(candidateLikelihood, interviewerLikelihood),
+        reasons,
+        method: 'llm',
+        analysis: {
+          candidateLikelihood,
+          interviewerLikelihood,
+          matchedCandidatePatterns: [],
+          matchedInterviewerPatterns: [],
+          summary: reasons[0],
+          method: 'llm',
+          reasons,
+        },
       };
     },
   };

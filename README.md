@@ -1,6 +1,6 @@
 # Sherlock Candidate Identifier
 
-**A production-minded decision-engine prototype for identifying the actual interview candidate in real time.** It combines multiple weak signals, updates continuously as meeting events arrive, explains its reasoning, and abstains instead of guessing when evidence is weak or ambiguous. The demo is synthetic and offline, but the architecture is adapter-ready for real meeting platforms.
+**An explainable multi-signal candidate-identification engine with a pluggable AI/ML transcript role-classification layer.** It combines multiple weak signals, updates continuously as meeting events arrive, explains its reasoning, and abstains instead of guessing when evidence is weak or ambiguous. The demo uses offline hybrid classification (rules + semantic similarity) for reproducibility, while production can replace it with LLMs, embeddings, or a trained classifier — and the architecture is adapter-ready for real meeting platforms.
 
 **Live demo: https://jay14090.github.io/sherlock-candidate-identifier/**
 
@@ -36,7 +36,7 @@ http://localhost:3000
 Testing and evaluation:
 
 ```bash
-npm test           # 61 unit tests: normalization, transcript analysis, scoring, scenarios
+npm test           # 83 unit tests: normalization, transcript classifiers, scoring, scenarios
 npm run evaluate   # expected-vs-actual table for all 7 scenarios
 npm run build      # type-check + production build
 ```
@@ -137,11 +137,29 @@ The demo replays mock JSON events, but they flow through the exact event schema 
 
 ## AI/ML Approach
 
-The engine defaults to **deterministic transcript classification** for reproducibility, zero API keys, and stable evaluation — every run of `npm run evaluate` produces identical numbers, which makes regressions detectable and claims checkable.
+The prototype uses a deterministic multi-signal decision engine for auditability and reproducibility. The transcript role classification layer is **pluggable** — every classifier implements one interface ([`lib/transcriptRoleClassifier.ts`](lib/transcriptRoleClassifier.ts)):
 
-The architecture exposes a `TranscriptRoleClassifier` interface, so the classifier can be swapped **without changing the scoring engine** — and the dashboard proves it: the **Classifier panel** has an opt-in LLM mode ([`lib/transcriptAnalyzer.llm.ts`](lib/transcriptAnalyzer.llm.ts)). Paste an Anthropic API key (kept in browser memory only, sent only to api.anthropic.com), pick a model, and the scenario's transcript is re-classified by Claude with structured outputs — semantic role understanding instead of keywords, with automatic fallback to the deterministic classifier on any error. The default demo and the entire evaluation remain fully offline.
+```ts
+interface TranscriptRoleClassifier {
+  classifyUtterance(text: string): Promise<TranscriptRoleResult> | TranscriptRoleResult;
+}
+// → { role: "candidate" | "interviewer" | "neutral", score, reasons[], method }
+```
 
-The production LLM design — a deterministic → embeddings → LLM cascade, self-hosted fine-tuned models for data-sensitive clients, cost/latency math, and why training a foundation model from scratch is the wrong call — is in [docs/production-ingestion.md](docs/production-ingestion.md#5-the-full-llm-in-production). The classifier upgrade path is in [docs/scoring.md](docs/scoring.md#transcript-classifier-roadmap).
+The default demo uses an **offline hybrid classifier** ([`lib/classifiers/hybridTranscriptClassifier.ts`](lib/classifiers/hybridTranscriptClassifier.ts)):
+
+1. **High-precision rule-based phrases** ([`ruleBasedTranscriptClassifier.ts`](lib/classifiers/ruleBasedTranscriptClassifier.ts)) — "my name is", "next question" are near-unambiguous and win when they fire.
+2. **Lightweight semantic similarity** ([`semanticTranscriptClassifier.ts`](lib/classifiers/semanticTranscriptClassifier.ts)) — cosine similarity over a normalized bag-of-words against banks of labeled candidate/interviewer/neutral example utterances, catching paraphrases the rules miss ("during the internship at that startup I mostly wrote backend APIs" contains no rule phrase but classifies as candidate). Every classification names the example it was closest to.
+
+When both fire and agree, confidence gets a small boost; when they conflict, confidence is lowered and **both** sets of reasons are kept, so ambiguity stays visible downstream. This avoids API keys and non-determinism during evaluation while still demonstrating the ML reasoning path. In production, the same interface can be replaced with an LLM, embedding model, or trained classifier using labeled meeting data — [`lib/classifiers/llmTranscriptClassifier.example.ts`](lib/classifiers/llmTranscriptClassifier.example.ts) sketches the server-side LLM extension.
+
+The dashboard proves the seam works: the **Classifier panel** has an opt-in LLM mode ([`lib/classifiers/llmTranscriptClassifier.ts`](lib/classifiers/llmTranscriptClassifier.ts)). Paste an Anthropic API key (kept in browser memory only, sent only to api.anthropic.com), pick a model, and the scenario's transcript is re-classified by Claude with structured outputs — full semantic role understanding, with automatic fallback to the offline hybrid classifier on any error. The default demo and the entire evaluation remain fully offline.
+
+The production LLM design — a rules → embeddings → LLM cascade, self-hosted fine-tuned models for data-sensitive clients, cost/latency math, and why training a foundation model from scratch is the wrong call — is in [docs/production-ingestion.md](docs/production-ingestion.md#5-the-full-llm-in-production). The classifier upgrade path is in [docs/scoring.md](docs/scoring.md#transcript-classifier-roadmap). Honest scope notes on the semantic classifier: [docs/evaluation.md](docs/evaluation.md#aiml-evaluation-notes).
+
+### Why not LLM-first?
+
+An LLM-first system would make the demo harder to reproduce, require API keys, add latency/cost, and produce less stable evaluation. The current architecture keeps the decision engine deterministic and explainable, while allowing LLM-based transcript classification as a production extension behind the same interface.
 
 ## Demo Scenarios
 
@@ -161,13 +179,13 @@ Measured output of `npm run evaluate` — deterministic, identical on every run:
 
 | Scenario | Expected | System Result | Candidate score | Coverage | Margin | Status |
 |---|---|---|---:|---:|---:|---|
-| clear-match | p2 | p2 | 0.87 | 0.89 | 0.64 | Selected |
+| clear-match | p2 | p2 | 0.87 | 0.89 | 0.63 | Selected |
 | device-name | p2 | p2 | 0.73 | 0.89 | 0.32 | Selected |
 | nickname | p2 | p2 | 0.72 | 0.67 | 0.49 | Selected |
-| multiple-interviewers-observers | p2 | p2 | 0.80 | 0.67 | 0.40 | Selected |
+| multiple-interviewers-observers | p2 | p2 | 0.79 | 0.67 | 0.39 | Selected |
 | missing-metadata | p2 | p2 | 0.71 | 0.67 | 0.38 | Selected |
-| ambiguous | abstain | abstained | 0.68 | 0.67 | 0.02 | Uncertain |
-| wrong-name | p2 | p2 | 0.80 | 0.78 | 0.52 | Selected |
+| ambiguous | abstain | abstained | 0.67 | 0.67 | 0.02 | Uncertain |
+| wrong-name | p2 | p2 | 0.79 | 0.78 | 0.51 | Selected |
 
 **Synthetic scenario pass rate: 7/7**, including correct abstention on the ambiguous case. Average candidate score on correct selections: 0.77.
 
@@ -179,12 +197,12 @@ The prototype assumes access to participant-level metadata, speaker-attributed t
 
 ## Limitations & Adversarial Cases
 
-The evaluation should be interpreted as controlled behavioral validation, not a real-world benchmark. Transcript role classification is intentionally simple in the offline demo and should be replaced by a semantic classifier in production. Known adversarial cases that are **not fully solved** — malicious renames, two-device joins, mid-call person swaps, wrong speaker attribution — are documented honestly, with current mitigations, in [docs/limitations.md](docs/limitations.md#adversarial-cases-not-fully-solved). Rejected design alternatives and the reasoning: [docs/alternatives.md](docs/alternatives.md).
+The evaluation should be interpreted as controlled behavioral validation, not a real-world benchmark. Transcript role classification is intentionally lightweight in the offline demo (phrase rules + example-bank similarity) and should be replaced by an embedding- or LLM-based classifier in production. Known adversarial cases that are **not fully solved** — malicious renames, two-device joins, mid-call person swaps, wrong speaker attribution — are documented honestly, with current mitigations, in [docs/limitations.md](docs/limitations.md#adversarial-cases-not-fully-solved). Rejected design alternatives and the reasoning: [docs/alternatives.md](docs/alternatives.md).
 
 ## Future Improvements
 
 1. **Real platform adapters** — Meet/Zoom/Teams event ingestion over WebSocket, feeding the same reducer.
-2. **Semantic transcript classification** — embeddings + selective LLM behind the existing interface ([roadmap](docs/scoring.md#transcript-classifier-roadmap)).
+2. **Stronger semantic transcript classification** — replace the bag-of-words example bank with embeddings + selective LLM behind the existing interface ([roadmap](docs/scoring.md#transcript-classifier-roadmap)).
 3. **Learned ranking model** — replace hand-tuned weights with a model trained on labeled historical interviews; calibrate the score into a real probability on a held-out set.
 4. **Speaker diarization + audio embeddings** — voice-level continuity evidence; detects mid-call speaker swaps.
 5. **Consented visual signals** — face presence/liveness as *additional* evidence, never the sole identifier.

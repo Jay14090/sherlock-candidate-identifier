@@ -11,7 +11,7 @@ flowchart LR
 
     N --> S1[Identity Signal Extractors<br/>name / email / interviewer exclusion]
     N --> S2[Behavior Signal Extractors<br/>join timing / speaking / webcam / share]
-    N --> S3[Transcript Signal Extractors<br/>candidate-like vs interviewer-like<br/>lib/transcriptAnalyzer.ts]
+    N --> S3[Transcript Role Classifiers<br/>hybrid rules + semantic similarity<br/>lib/classifiers/]
 
     S1 --> R[Scoring Engine<br/>lib/scorer.ts<br/>weighted sum · smoothing · thresholds]
     S2 --> R
@@ -40,13 +40,17 @@ This is the production seam: replace the JSON replay with a WebSocket/Kafka cons
 - Email local-part extraction and tokenization (`neha.verma` → `["neha","verma"]`), used both for direct email matching and as a fallback identity signal when the candidate name is missing or wrong.
 - Small hand-rolled Levenshtein — names are short, so O(n·m) is irrelevant, and zero dependencies keeps the demo reproducible.
 
-### Transcript analyzer — `lib/transcriptAnalyzer.ts`
+### Transcript role classifiers — `lib/transcriptRoleClassifier.ts` + `lib/classifiers/`
 
-Deterministic role classification: counts first-person experience phrases (candidate-like) vs question/instruction phrases (interviewer-like). Both likelihoods can be non-zero; a single matched phrase is capped so it can never dominate. The `TranscriptRoleClassifier` async interface wraps it so an LLM-backed classifier can be swapped in without touching the scorer.
+Every classifier implements one interface — `classifyUtterance(text) → { role, score, reasons, method }` — so the scoring engine never knows or cares which one produced an analysis. The demo default is an **offline hybrid**:
 
-Deterministic-first was a deliberate choice: reproducible tests, zero latency, zero cost, no API keys — and the demo's evaluation numbers mean something because they can't vary run to run.
+- **Rule-based** (`classifiers/ruleBasedTranscriptClassifier.ts`): counts first-person experience phrases (candidate-like) vs question/instruction phrases (interviewer-like). Both likelihoods can be non-zero; a single matched phrase is capped so it can never dominate.
+- **Semantic** (`classifiers/semanticTranscriptClassifier.ts`): normalized bag-of-words cosine similarity against small banks of labeled candidate/interviewer/neutral example utterances — catches paraphrases with no rule phrase, and every classification names the closest example.
+- **Hybrid** (`classifiers/hybridTranscriptClassifier.ts`, the default): strong rule hits win; otherwise semantic decides; agreement boosts confidence slightly; conflict lowers it and keeps both sets of reasons.
 
-The swap is not hypothetical: `lib/transcriptAnalyzer.llm.ts` implements the same interface with Claude (structured outputs), and the dashboard's **Classifier panel** lets a reviewer run it live with their own API key — the scenario's transcript events are re-classified semantically and the replay re-scores with the LLM analyses, falling back to the deterministic classifier on any error. The production cascade (deterministic → embeddings → selective LLM) is designed in [production-ingestion.md](production-ingestion.md#5-the-full-llm-in-production).
+Offline-first was a deliberate choice: reproducible tests, zero latency, zero cost, no API keys — and the demo's evaluation numbers mean something because they can't vary run to run.
+
+The swap is not hypothetical: `classifiers/llmTranscriptClassifier.ts` implements the same interface with Claude (structured outputs), and the dashboard's **Classifier panel** lets a reviewer run it live with their own API key — the scenario's transcript events are re-classified semantically and the replay re-scores with the LLM analyses, falling back to the offline hybrid classifier on any error (`classifiers/llmTranscriptClassifier.example.ts` sketches the server-side production variant). The production cascade (rules → embeddings → selective LLM) is designed in [production-ingestion.md](production-ingestion.md#5-the-full-llm-in-production).
 
 ### Scoring engine — `lib/scorer.ts`
 

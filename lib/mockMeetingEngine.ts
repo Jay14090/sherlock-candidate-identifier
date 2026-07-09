@@ -1,5 +1,6 @@
-import { analyzeTranscript } from './transcriptAnalyzer';
+import { analyzeUtterance } from './classifiers/hybridTranscriptClassifier';
 import { scoreMeetingState } from './scorer';
+import { toTranscriptAnalysis, type TranscriptRoleClassifier } from './transcriptRoleClassifier';
 import type {
   MeetingEvent,
   MeetingRuntimeState,
@@ -9,7 +10,6 @@ import type {
   SpeechPayload,
   TranscriptAnalysis,
   TranscriptPayload,
-  TranscriptRoleClassifier,
 } from './types';
 
 /**
@@ -135,8 +135,9 @@ function reduceParticipant(
           durationSeconds: payload.durationSeconds ?? 0,
           timestamp: event.timestamp,
           // A pre-computed analysis (e.g. from the LLM classifier) wins;
-          // otherwise fall back to the deterministic keyword classifier.
-          analysis: transcriptAnalysisOverride ?? analyzeTranscript(text),
+          // otherwise the default offline hybrid classifier (rules +
+          // semantic similarity) runs synchronously.
+          analysis: transcriptAnalysisOverride ?? analyzeUtterance(text),
         },
       ];
       next.totalSpeakingSeconds =
@@ -237,7 +238,7 @@ export async function classifyTranscriptEvents(
   onProgress?.(0, transcriptEvents.length);
   for (const event of transcriptEvents) {
     const text = String((event.payload as unknown as TranscriptPayload).text ?? '');
-    analyses[event.id] = await classifier.classify(text);
+    analyses[event.id] = toTranscriptAnalysis(await classifier.classifyUtterance(text));
     done += 1;
     onProgress?.(done, transcriptEvents.length);
   }

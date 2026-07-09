@@ -6,7 +6,11 @@ import {
   isFinished,
   stepForward,
 } from '@/lib/mockMeetingEngine';
-import type { TranscriptAnalysis, TranscriptRoleClassifier } from '@/lib/types';
+import type {
+  TranscriptRoleClassifier,
+  TranscriptRoleResult,
+} from '@/lib/transcriptRoleClassifier';
+import type { TranscriptAnalysis } from '@/lib/types';
 
 function mustGet(id: string) {
   const scenario = getScenarioById(id);
@@ -20,11 +24,20 @@ const candidateLikeAnalysis: TranscriptAnalysis = {
   matchedCandidatePatterns: [],
   matchedInterviewerPatterns: [],
   summary: 'LLM (stub): clearly a candidate answering.',
+  method: 'llm',
+};
+
+const candidateLikeResult: TranscriptRoleResult = {
+  role: 'candidate',
+  score: 0.9,
+  reasons: ['LLM (stub): clearly a candidate answering.'],
+  method: 'llm',
+  analysis: candidateLikeAnalysis,
 };
 
 /** Deterministic stand-in for the LLM classifier — no network calls in tests. */
 const stubClassifier: TranscriptRoleClassifier = {
-  classify: async () => candidateLikeAnalysis,
+  classifyUtterance: async () => candidateLikeResult,
 };
 
 describe('classifyTranscriptEvents', () => {
@@ -48,7 +61,7 @@ describe('classifyTranscriptEvents', () => {
 
   it('propagates classifier errors so callers can fall back', async () => {
     const failing: TranscriptRoleClassifier = {
-      classify: async () => {
+      classifyUtterance: async () => {
         throw new Error('401 invalid api key');
       },
     };
@@ -81,7 +94,7 @@ describe('stepForward with pre-computed analyses', () => {
     expect(state.decision.selectedParticipantId).toBe('p2');
   });
 
-  it('falls back to the deterministic classifier for events without an entry', () => {
+  it('falls back to the offline hybrid classifier for events without an entry', () => {
     const scenario = mustGet('clear-match');
     let state = createRuntimeState(scenario);
     while (!isFinished(state)) state = stepForward(state, {}); // empty map = all fallback

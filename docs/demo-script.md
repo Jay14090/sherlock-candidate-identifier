@@ -20,7 +20,7 @@ Show `docs/architecture.md` diagram.
 >
 > Selection needs the leader to have real evidence — not just joins and webcam toggles — plus two thresholds: score ≥ 68% **and** a 12-point lead over the runner-up. Otherwise the system says 'uncertain' out loud.
 >
-> Everything is deterministic TypeScript — reproducible tests, no API keys, runs offline. The transcript classifier sits behind an interface so an LLM can replace it later, and the event reducer is exactly the seam where a real Meet/Zoom/Teams adapter would plug in."
+> Everything is deterministic TypeScript — reproducible tests, no API keys, runs offline. Transcript role classification is a pluggable layer: the default is an offline hybrid — high-precision phrase rules plus semantic similarity against labeled example utterances — and an LLM can replace it behind the same interface. The event reducer is exactly the seam where a real Meet/Zoom/Teams adapter would plug in."
 
 ## 3. Signals and scoring (2:30 – 3:30)
 
@@ -50,19 +50,19 @@ Scenario: **Ambiguous: two plausible candidates**. Press Play.
 
 > "Finally, the case every heuristic system gets wrong. Candidate is 'Aman Singh' — and two participants, 'Aman S' and 'A Singh', both partially match and both give answer-style responses. There's no candidate email to break the tie.
 >
-> Final state: 68% versus 66%. A two-point margin. The system says 'Candidate uncertain', shows the competing evidence side by side, and names the fix: more transcript or verified identity evidence. In production this is where you'd route to a human reviewer instead of feeding the wrong person's video to the fraud detectors."
+> Final state: 67% versus 65%. A two-point margin. The system says 'Candidate uncertain', shows the competing evidence side by side, and names the fix: more transcript or verified identity evidence. In production this is where you'd route to a human reviewer instead of feeding the wrong person's video to the fraud detectors."
 
 ## 6b. Optional — live LLM classification (if you have an API key handy)
 
 Switch the Classifier panel to **LLM (Claude)**, paste a key, run classification on the device-name scenario, then replay.
 
-> "One more thing — the transcript classifier is swappable. This panel re-classifies the same utterances with Claude through the exact same interface: semantic role understanding instead of keywords, structured outputs so the response is guaranteed-parseable JSON, and automatic fallback to the deterministic classifier if anything fails. The scoring engine didn't change at all — that's the point of the interface seam. In production this runs as a cascade: keywords first, embeddings second, the LLM only on ambiguous utterances."
+> "One more thing — the transcript classifier is swappable. The default 'Offline hybrid' mode combines phrase rules with semantic similarity against labeled example utterances, so paraphrases get caught without any API. This panel re-classifies the same utterances with Claude through the exact same interface: full semantic role understanding, structured outputs so the response is guaranteed-parseable JSON, and automatic fallback to the offline hybrid if anything fails. The scoring engine didn't change at all — that's the point of the interface seam. In production this runs as a cascade: rules first, embeddings second, the LLM only on ambiguous utterances."
 
 ## 7. Trade-offs (7:45 – 8:45)
 
-> "Deliberate choices: simulated events instead of platform OAuth — the hard problem is reasoning, and simulation makes every edge case reproducible. Deterministic keyword transcript classification instead of an LLM — reproducible evaluation, zero keys, zero latency; the LLM upgrade path is one interface away. No face recognition — consent-sensitive, fails with cameras off, and role identification isn't identity verification.
+> "Deliberate choices: simulated events instead of platform OAuth — the hard problem is reasoning, and simulation makes every edge case reproducible. Offline hybrid transcript classification (rules + semantic similarity) instead of an LLM — reproducible evaluation, zero keys, zero latency; the LLM upgrade path is one interface away. No face recognition — consent-sensitive, fails with cameras off, and role identification isn't identity verification.
 >
-> Honest limitations: hand-tuned weights, seven authored scenarios, keyword matching can be paraphrased around. The synthetic scenario pass rate — 7 out of 7 with correct abstention — is controlled behavioral validation of the reasoning, not a real-world accuracy benchmark."
+> Honest limitations: hand-tuned weights, seven authored scenarios, and the offline classifier's paraphrase coverage is only as good as its example banks. The synthetic scenario pass rate — 7 out of 7 with correct abstention — is controlled behavioral validation of the reasoning, not a real-world accuracy benchmark."
 
 ## 8. What I'd build next (8:45 – 9:30)
 

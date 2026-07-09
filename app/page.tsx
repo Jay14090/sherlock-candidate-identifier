@@ -17,7 +17,7 @@ import {
   isFinished,
   stepForward,
 } from '@/lib/mockMeetingEngine';
-import { createLlmTranscriptClassifier } from '@/lib/transcriptAnalyzer.llm';
+import { createLlmTranscriptClassifier } from '@/lib/classifiers/llmTranscriptClassifier';
 import type { ParticipantId, TranscriptAnalysis } from '@/lib/types';
 import { statusLabel } from '@/lib/utils';
 
@@ -42,8 +42,8 @@ export default function Home() {
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
 
-  // Optional LLM classification (opt-in; deterministic keywords by default).
-  const [classifierMode, setClassifierMode] = useState<ClassifierMode>('deterministic');
+  // Optional LLM classification (opt-in; offline hybrid rules + semantic by default).
+  const [classifierMode, setClassifierMode] = useState<ClassifierMode>('hybrid');
   const [apiKey, setApiKey] = useState('');
   const [llmModel, setLlmModel] = useState('claude-opus-4-8');
   const [llmStatus, setLlmStatus] = useState<LlmStatus>('idle');

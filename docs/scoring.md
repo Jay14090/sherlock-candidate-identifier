@@ -68,10 +68,10 @@ type CandidateIdentificationResult = {
 
 ## Transcript classifier roadmap
 
-The demo classifier is deterministic keyword matching — chosen for reproducible evaluation, zero API keys, and zero latency. It sits behind the `TranscriptRoleClassifier` interface, so upgrades don't touch the scoring engine. The production path, in order:
+The demo classifier is an offline hybrid — high-precision phrase rules plus bag-of-words semantic similarity against labeled example utterances — chosen for reproducible evaluation, zero API keys, and zero latency. It sits behind the `TranscriptRoleClassifier` interface (`lib/transcriptRoleClassifier.ts`), so upgrades don't touch the scoring engine. The production path, in order:
 
-1. **Deterministic high-precision phrases** (current default) — cheap first pass; keep as the fast path.
-2. **Embedding similarity** against a library of labeled candidate/interviewer utterance examples — robust to paraphrase, still cheap per utterance.
-3. **LLM classifier for ambiguous utterances** — implemented and demoable today: `lib/transcriptAnalyzer.llm.ts` is a working Claude-backed classifier (structured outputs) behind the same interface, opt-in from the dashboard's Classifier panel with a user-supplied API key. In production it runs selectively (only on utterances the cheaper tiers score as ambiguous) to bound latency and cost — see [production-ingestion.md](production-ingestion.md#5-the-full-llm-in-production).
+1. **Deterministic high-precision phrases** (`lib/classifiers/ruleBasedTranscriptClassifier.ts`, first stage of the current default) — cheap first pass; keep as the fast path.
+2. **Similarity against labeled candidate/interviewer utterance examples** — robust to paraphrase, still cheap per utterance. The current default's second stage (`lib/classifiers/semanticTranscriptClassifier.ts`) implements this with normalized bag-of-words cosine similarity; production upgrades it to embedding vectors with the same example-bank structure.
+3. **LLM classifier for ambiguous utterances** — implemented and demoable today: `lib/classifiers/llmTranscriptClassifier.ts` is a working Claude-backed classifier (structured outputs) behind the same interface, opt-in from the dashboard's Classifier panel with a user-supplied API key (`lib/classifiers/llmTranscriptClassifier.example.ts` sketches the server-side variant). In production it runs selectively (only on utterances the cheaper tiers score as ambiguous) to bound latency and cost — see [production-ingestion.md](production-ingestion.md#5-the-full-llm-in-production).
 4. **Multilingual / code-mixed support** — the keyword list is English-only; embeddings and LLMs remove that constraint.
 5. **Calibration against labeled meeting data** — fit weights and thresholds on real labeled interviews, and turn the score into a calibrated probability with a held-out validation set.

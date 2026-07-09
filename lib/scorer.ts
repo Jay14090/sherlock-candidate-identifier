@@ -447,31 +447,65 @@ export function scoreTranscriptLikelihood(participant: ParticipantRuntimeState):
 
   // Small bonus as consistent evidence accumulates.
   const countBonus = Math.min(0.08, 0.02 * utterances.length);
-  const candidateScore = clamp01(Math.min(0.95, avgCandidate + (avgCandidate > 0.5 ? countBonus : 0)));
+  let candidateScore = clamp01(Math.min(0.95, avgCandidate + (avgCandidate > 0.5 ? countBonus : 0)));
   const interviewerScore = clamp01(avgInterviewer);
 
-  const matchedPhrases = [...new Set(utterances.flatMap((u) => u.analysis.matchedCandidatePatterns))];
-  if (candidateScore > 0.55) {
-    const examples = matchedPhrases.slice(0, 3).map((p) => `"${p}"`).join(', ');
+  // Conflicting evidence: the same participant reads as both candidate-like
+  // and interviewer-like on average. Damp the score slightly and say so.
+  const conflicting = avgCandidate > 0.5 && avgInterviewer > 0.5;
+  if (conflicting) {
+    candidateScore = clamp01(candidateScore - 0.05);
     evidence.push(
       makeEvidence(
         'Transcript Role',
-        candidateScore,
+        0.4,
         weight,
-        `Transcript contains candidate-style first-person phrases${examples ? ` such as ${examples}` : ''}.`,
+        'Transcript shows conflicting evidence — this participant produces both candidate-style and interviewer-style utterances.',
       ),
+    );
+  }
+
+  const methodNote = describeClassifierMethod(utterances);
+  const matchedPhrases = [...new Set(utterances.flatMap((u) => u.analysis.matchedCandidatePatterns))];
+  // Semantic classifications carry no matched phrases — surface their
+  // closest-example reason instead so the evidence stays explainable.
+  const semanticReason = utterances
+    .flatMap((u) => u.analysis.reasons ?? [])
+    .find((r) => r.startsWith('Semantically closest to candidate example'));
+
+  if (candidateScore > 0.55) {
+    const examples = matchedPhrases.slice(0, 3).map((p) => `"${p}"`).join(', ');
+    const basis = examples
+      ? `candidate-style first-person phrases such as ${examples}`
+      : semanticReason
+        ? `utterances semantically close to candidate examples (${lowercaseFirst(semanticReason)})`
+        : 'candidate-style first-person utterances';
+    evidence.push(
+      makeEvidence('Transcript Role', candidateScore, weight, `Transcript contains ${basis}${methodNote}.`),
     );
   } else if (interviewerScore > 0.55) {
     evidence.push(
-      makeEvidence('Transcript Role', candidateScore, weight, 'Transcript reads like an interviewer asking questions, not a candidate answering.'),
+      makeEvidence('Transcript Role', candidateScore, weight, `Transcript reads like an interviewer asking questions, not a candidate answering${methodNote}.`),
     );
   } else {
     evidence.push(
-      makeEvidence('Transcript Role', candidateScore, weight, 'Transcript exists but does not clearly indicate candidate or interviewer role.'),
+      makeEvidence('Transcript Role', candidateScore, weight, `Transcript exists but does not clearly indicate candidate or interviewer role${methodNote}.`),
     );
   }
 
   return { candidateScore, interviewerScore, evidence };
+}
+
+/** Short suffix naming which classifier produced the transcript analyses. */
+function describeClassifierMethod(
+  utterances: ParticipantRuntimeState['utterances'],
+): string {
+  const methods = new Set(
+    utterances.map((u) => u.analysis.method).filter((m): m is NonNullable<typeof m> => m !== undefined),
+  );
+  if (methods.size === 0) return '';
+  if (methods.has('llm')) return ' (classified by LLM)';
+  return ' (classified by hybrid rules + semantic similarity)';
 }
 
 /* ------------------------------------------------------------------ */

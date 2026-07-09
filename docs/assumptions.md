@@ -21,7 +21,7 @@ The challenge statement says to assume access to participant info, per-participa
 8. **Candidate identity is inferred probabilistically, never guaranteed.** The system abstains (`uncertain`) when the top score is below 0.68 or the margin over the runner-up is below 0.12.
 9. **Missing information is neutral, not negative.** A participant without an exposed email gets a 0.4 email score, identical to everyone else without email data, and the evidence log states this explicitly.
 10. **One candidate per meeting.** Panel interviews with multiple simultaneous candidates would require selecting top-N with per-slot margins — a straightforward extension of the same decision logic, but out of scope here.
-11. **English-language interviews.** The keyword transcript classifier is English-only; the LLM classifier extension point removes this constraint.
+11. **English-language interviews.** The offline hybrid transcript classifier (rule phrases + example banks) is English-only; the LLM classifier extension point removes this constraint.
 
 ## Scope decisions
 

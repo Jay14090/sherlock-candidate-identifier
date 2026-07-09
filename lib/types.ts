@@ -150,11 +150,10 @@ export interface TranscriptAnalysis {
   matchedCandidatePatterns: string[];
   matchedInterviewerPatterns: string[];
   summary: string;
-}
-
-/** Pluggable seam for a future LLM-backed classifier. The default implementation is local and deterministic. */
-export interface TranscriptRoleClassifier {
-  classify(text: string): Promise<TranscriptAnalysis>;
+  /** Which classifier produced this analysis. Absent on legacy/stub analyses. */
+  method?: 'rules' | 'semantic' | 'llm';
+  /** Human-readable classification reasons (matched phrases, closest examples). */
+  reasons?: string[];
 }
 
 export interface AnalyzedUtterance {
